@@ -1,0 +1,23 @@
+import { describe, expect, it } from 'vitest'
+import { getTimbre, nearestSample, registerTimbre } from './instruments'
+
+describe('instruments', () => {
+  it('repitches from the nearest recorded note', () => {
+    const notes = [48, 51, 54, 57, 60] // every minor third, like Salamander
+    expect(nearestSample(notes, 52)).toEqual({ sampleMidi: 51, playbackRate: Math.pow(2, 1 / 12) })
+    expect(nearestSample(notes, 47).sampleMidi).toBe(48)
+    expect(nearestSample(notes, 60)).toEqual({ sampleMidi: 60, playbackRate: 1 })
+  })
+
+  it('registers and resolves timbres', () => {
+    expect(getTimbre('complex').source.kind).toBe('synth')
+    registerTimbre({
+      id: 'piano',
+      label: 'Piano',
+      source: { kind: 'samples', baseUrl: '/samples/piano', notes: [60] },
+      range: [21, 108],
+    })
+    expect(getTimbre('piano').label).toBe('Piano')
+    expect(() => getTimbre('nope')).toThrow()
+  })
+})

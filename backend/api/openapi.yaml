@@ -1,0 +1,43 @@
+openapi: 3.1.0
+info:
+  title: Pitch Lab API
+  version: 0.1.0
+  description: >
+    Thin sync/auth API for Pitch Lab. All training logic runs client-side;
+    the server stores accounts, the append-only trial log and versioned state documents.
+servers:
+  - url: https://pitchlab-api.cloud-test.dev
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      summary: Liveness probe
+      operationId: healthz
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Status" }
+  /readyz:
+    get:
+      summary: Readiness probe (includes DB ping)
+      operationId: readyz
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Status" }
+        "503":
+          description: Database unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Status" }
+components:
+  schemas:
+    Status:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }

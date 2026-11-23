@@ -1,0 +1,54 @@
+{
+  "name": "pitchlab-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "preview": "vite preview",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --fix --cache",
+    "lint:check": "eslint . --cache",
+    "format": "prettier --write src/",
+    "api-types": "openapi-typescript ../backend/api/openapi.yaml -o src/data/api-types.ts"
+  },
+  "dependencies": {
+    "dexie": "^4.4.7",
+    "pinia": "^4.1.0",
+    "tonal": "^6.9.0",
+    "ts-fsrs": "^5.4.2",
+    "vexflow": "^5.9.0",
+    "vue": "^3.5.46",
+    "vue-router": "^5.5.1",
+    "vue-sonner": "^2.0.9"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.6",
+    "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/test-utils": "^2.6.0",
+    "@vue/tsconfig": "^0.9.1",
+    "eslint": "^10.15.0",
+    "eslint-plugin-vue": "^10.12.1",
+    "fake-indexeddb": "^6.2.8",
+    "jiti": "^2.7.0",
+    "jsdom": "^31.0.1",
+    "npm-run-all2": "^9.1.0",
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.10.1",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.1",
+    "vue-tsc": "^3.3.14"
+  }
+}

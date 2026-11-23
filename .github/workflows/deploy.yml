@@ -1,0 +1,162 @@
+name: Test, Build and Push Images to GHCR
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pitchlab
+          POSTGRES_PASSWORD: pitchlab
+          POSTGRES_DB: pitchlab
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pitchlab -d pitchlab"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - name: go vet
+        run: go vet ./...
+      - name: go test (race, with Postgres)
+        env:
+          TEST_DATABASE_URL: postgres://pitchlab:pitchlab@localhost:5432/pitchlab?sslmode=disable
+        run: go test -race -count=1 ./...
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint:check
+      - name: API types are up to date
+        run: npm run api-types && git diff --exit-code -- src/data/api-types.ts
+      - run: npx vitest run
+      - run: npm run build
+
+  build-and-push:
+    if: github.event_name == 'push'
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Convert repository owner to lowercase and get short SHA
+        id: vars
+        run: |
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      # -----------------------------------------------------------------------
+      # Backend (Go cross-compiles natively; no QEMU needed for this image)
+      # -----------------------------------------------------------------------
+      - name: Extract metadata for Backend
+        id: meta_backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.vars.outputs.owner }}/pitchlab-backend
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.vars.outputs.short_sha }}
+            type=semver,pattern={{version}}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_backend.outputs.tags }}
+          labels: ${{ steps.meta_backend.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      # -----------------------------------------------------------------------
+      # Frontend
+      # -----------------------------------------------------------------------
+      - name: Extract metadata for Frontend
+        id: meta_frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.vars.outputs.owner }}/pitchlab-frontend
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.vars.outputs.short_sha }}
+            type=semver,pattern={{version}}
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: production
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_frontend.outputs.tags }}
+          labels: ${{ steps.meta_frontend.outputs.labels }}
+          build-args: |
+            VITE_API_URL=https://pitchlab-api.cloud-test.dev
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      # -----------------------------------------------------------------------
+      # GitOps trigger: bump image tags, ArgoCD syncs k8s/
+      # -----------------------------------------------------------------------
+      - name: Update Kubernetes Deployment Manifests
+        if: github.ref == 'refs/heads/main'
+        run: |
+          sed -i "s|image: ghcr.io/.*/pitchlab-backend:.*|image: ghcr.io/${{ steps.vars.outputs.owner }}/pitchlab-backend:${{ steps.vars.outputs.short_sha }}|g" k8s/backend-deployment.yaml
+          sed -i "s|image: ghcr.io/.*/pitchlab-frontend:.*|image: ghcr.io/${{ steps.vars.outputs.owner }}/pitchlab-frontend:${{ steps.vars.outputs.short_sha }}|g" k8s/frontend-deployment.yaml
+
+      - name: Commit and push manifest changes
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/
+          git diff --staged --quiet || (git commit -m "deploy: update image tags to ${{ steps.vars.outputs.short_sha }} [skip ci]" && git push)

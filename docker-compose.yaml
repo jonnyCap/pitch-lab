@@ -1,0 +1,52 @@
+# Local development stack: Postgres 16 + Go API + Vite dev server.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pitchlab
+      POSTGRES_PASSWORD: pitchlab
+      POSTGRES_DB: pitchlab
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pitchlab -d pitchlab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    image: pitchlab-backend:dev
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://pitchlab:pitchlab@db:5432/pitchlab?sslmode=disable
+      POSTGRES_SCHEMA: pitchlab
+      SECRET_KEY: ${SECRET_KEY:-dev-only-secret-key-change-me-0123456789}
+      CORS_ORIGINS: http://localhost:5173
+      PUBLIC_APP_URL: http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    image: pitchlab-frontend:dev
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8080
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
