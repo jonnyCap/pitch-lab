@@ -21,7 +21,7 @@ spec:
         - name: ghcr-creds
       containers:
         - name: pitchlab-frontend
-          image: ghcr.io/jonnycap/pitchlab-frontend:df88a9f
+          image: ghcr.io/jonnycap/pitchlab-frontend:efc10f7
           imagePullPolicy: Always
           ports:
             - name: http
