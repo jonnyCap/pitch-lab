@@ -5,7 +5,7 @@
  */
 import { midiToHz } from '@/music/pitch'
 
-export type SynthWaveform = 'sine' | 'complex' | 'square'
+export type SynthWaveform = 'sine' | 'complex' | 'square' | 'triangle' | 'bright'
 
 export interface RenderToneOptions {
   sampleRate: number
@@ -35,6 +35,16 @@ export function harmonicAmplitudes(
       // a neutral "complex tone" (cf. Bermudez & Zatorre 2009 / Wong et al. 2020).
       const n = Math.min(10, maxH)
       return Array.from({ length: n }, (_, i) => 1 / (i + 1))
+    }
+    case 'triangle': {
+      // Odd harmonics with 1/n² roll-off: soft, flute-like.
+      const n = Math.min(15, maxH)
+      return Array.from({ length: n }, (_, i) => ((i + 1) % 2 === 1 ? 1 / (i + 1) ** 2 : 0))
+    }
+    case 'bright': {
+      // Strong upper partials (1/n^0.8, 14 partials): reedy, brass-like.
+      const n = Math.min(14, maxH)
+      return Array.from({ length: n }, (_, i) => 1 / (i + 1) ** 0.8)
     }
     case 'square': {
       // Odd harmonics only, 1/n — an untrained, "unnatural" test timbre.

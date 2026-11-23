@@ -4,7 +4,7 @@ import { estimateF0 } from './analysis'
 import { harmonicAmplitudes, renderTone, rms, type SynthWaveform } from './synth'
 
 const SR = 44100
-const waveforms: SynthWaveform[] = ['sine', 'complex', 'square']
+const waveforms: SynthWaveform[] = ['sine', 'complex', 'square', 'triangle', 'bright']
 
 describe('renderTone', () => {
   it.each(waveforms)('%s is in tune within ±5 cents across C3–C7', (waveform) => {

@@ -4,3 +4,6 @@ dev-dist/
 coverage/
 .eslintcache
 *.tsbuildinfo
+.sample-cache/
+test-results/
+playwright-report/

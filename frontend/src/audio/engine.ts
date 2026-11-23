@@ -66,7 +66,11 @@ export class AudioEngine {
     let out: AudioNode = src
 
     if (def.source.kind === 'samples') {
-      src.playbackRate.value = nearestSample(def.source.notes, midi).playbackRate
+      src.playbackRate.value = nearestSample(
+        def.source.notes,
+        midi,
+        def.source.detuneCents,
+      ).playbackRate
       // Trim recorded notes to the stimulus length with a short fade-out.
       const g = ctx.createGain()
       src.connect(g)

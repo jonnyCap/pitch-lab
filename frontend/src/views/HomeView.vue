@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { SAMPLE_CREDITS } from '@/audio/sampleSets'
 </script>
 
 <template>
@@ -32,6 +33,9 @@ import { RouterLink } from 'vue-router'
     Honest expectations: in published studies most adults learned to name about 7–9 of 12 pitches
     after 20–40 hours of training, and roughly 15–20% reached full absolute-pitch performance.
   </p>
+  <p v-if="SAMPLE_CREDITS.length" class="muted credits">
+    Instrument samples: {{ SAMPLE_CREDITS.join(' · ') }}
+  </p>
 </template>
 
 <style scoped>
@@ -50,6 +54,9 @@ import { RouterLink } from 'vue-router'
 .tile h2 {
   margin: 0 0 0.25rem;
   font-size: 1.15rem;
+}
+.credits {
+  font-size: 0.75rem;
 }
 .note {
   margin-top: 2rem;

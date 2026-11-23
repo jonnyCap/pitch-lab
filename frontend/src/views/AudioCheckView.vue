@@ -135,9 +135,7 @@ onBeforeUnmount(() => {
     <section class="card stack">
       <h2>Reaction time</h2>
       <p class="muted">
-        Press <kbd>Space</kbd> or tap the button as soon as you hear the tone ({{
-          rtRounds
-        }}
+        Press <kbd>Space</kbd> or tap the button as soon as you hear the tone ({{ rtRounds }}
         rounds).
       </p>
       <div class="row">

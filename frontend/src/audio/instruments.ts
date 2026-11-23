@@ -5,12 +5,19 @@
  * repitched from the nearest recorded note (max ±2 semitones keeps timbre natural).
  */
 import type { SynthWaveform } from './synth'
+import { SAMPLE_TIMBRES } from './sampleSets'
 
 export type TimbreId = string
 
 export type TimbreSource =
   | { kind: 'synth'; waveform: SynthWaveform }
-  | { kind: 'samples'; baseUrl: string; notes: readonly number[] }
+  | {
+      kind: 'samples'
+      baseUrl: string
+      notes: readonly number[]
+      /** Measured deviation of each recorded note from equal temperament (cents). */
+      detuneCents?: Readonly<Record<number, number>>
+    }
 
 export interface TimbreDef {
   id: TimbreId
@@ -28,10 +35,24 @@ export const SYNTH_TIMBRES: readonly TimbreDef[] = [
     range: [36, 96],
   },
   { id: 'sine', label: 'Sine', source: { kind: 'synth', waveform: 'sine' }, range: [36, 96] },
+  {
+    id: 'triangle',
+    label: 'Soft tone',
+    source: { kind: 'synth', waveform: 'triangle' },
+    range: [36, 96],
+  },
+  {
+    id: 'bright',
+    label: 'Bright tone',
+    source: { kind: 'synth', waveform: 'bright' },
+    range: [36, 96],
+  },
   { id: 'square', label: 'Square', source: { kind: 'synth', waveform: 'square' }, range: [36, 96] },
 ]
 
-const registry = new Map<TimbreId, TimbreDef>(SYNTH_TIMBRES.map((t) => [t.id, t]))
+const registry = new Map<TimbreId, TimbreDef>(
+  [...SYNTH_TIMBRES, ...SAMPLE_TIMBRES].map((t) => [t.id, t]),
+)
 
 export function registerTimbre(def: TimbreDef): void {
   registry.set(def.id, def)
@@ -47,15 +68,20 @@ export function listTimbres(): TimbreDef[] {
   return [...registry.values()]
 }
 
-/** Picks the recorded note closest to `midi` and the playback rate needed to reach it. */
+/**
+ * Picks the recorded note closest to `midi` and the playback rate needed to reach
+ * it in exact equal temperament (compensating the recording's measured detune).
+ */
 export function nearestSample(
   notes: readonly number[],
   midi: number,
+  detuneCents: Readonly<Record<number, number>> = {},
 ): { sampleMidi: number; playbackRate: number } {
   if (notes.length === 0) throw new Error('timbre has no samples')
   let best = notes[0]!
   for (const n of notes) {
     if (Math.abs(n - midi) < Math.abs(best - midi)) best = n
   }
-  return { sampleMidi: best, playbackRate: Math.pow(2, (midi - best) / 12) }
+  const cents = (midi - best) * 100 - (detuneCents[best] ?? 0)
+  return { sampleMidi: best, playbackRate: Math.pow(2, cents / 1200) }
 }

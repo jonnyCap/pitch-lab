@@ -9,6 +9,15 @@ describe('instruments', () => {
     expect(nearestSample(notes, 60)).toEqual({ sampleMidi: 60, playbackRate: 1 })
   })
 
+  it('compensates the measured detune of the recording', () => {
+    // Sample at 96 is 12 cents sharp; playing 96 must slow it by 12 cents.
+    const r = nearestSample([92, 96], 96, { 96: 12 })
+    expect(r.sampleMidi).toBe(96)
+    expect(1200 * Math.log2(r.playbackRate)).toBeCloseTo(-12, 9)
+    const up = nearestSample([92, 96], 94, { 92: -5 })
+    expect(1200 * Math.log2(up.playbackRate)).toBeCloseTo(205, 9)
+  })
+
   it('registers and resolves timbres', () => {
     expect(getTimbre('complex').source.kind).toBe('synth')
     registerTimbre({

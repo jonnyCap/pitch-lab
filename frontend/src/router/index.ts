@@ -5,11 +5,12 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'home', component: HomeView },
+    { path: '/trainer', name: 'trainer', component: () => import('@/views/TrainerView.vue') },
     {
-      path: '/trainer',
-      name: 'trainer',
-      component: () => import('@/views/ComingSoonView.vue'),
-      props: { title: 'Absolute pitch trainer', milestone: 'M1' },
+      path: '/test/:kind(pretest|weekly|posttest|retention_1m|retention_3m)',
+      name: 'test',
+      component: () => import('@/views/TestView.vue'),
+      props: true,
     },
     {
       path: '/learn',
@@ -17,12 +18,7 @@ const router = createRouter({
       component: () => import('@/views/ComingSoonView.vue'),
       props: { title: 'Music fundamentals', milestone: 'M3' },
     },
-    {
-      path: '/progress',
-      name: 'progress',
-      component: () => import('@/views/ComingSoonView.vue'),
-      props: { title: 'Progress', milestone: 'M1' },
-    },
+    { path: '/progress', name: 'progress', component: () => import('@/views/ProgressView.vue') },
     {
       path: '/audio-check',
       name: 'audio-check',
