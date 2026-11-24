@@ -47,9 +47,12 @@ export interface StateDoc<T = unknown> {
   dirty: 0 | 1 // 1 = local change not yet pushed (number so it can be indexed)
 }
 
+export type TestKind =
+  'pretest' | 'weekly' | 'posttest' | 'retention_1m' | 'retention_3m' | 'pitch_memory'
+
 export interface TestResult {
   id: string
-  kind: 'pretest' | 'weekly' | 'retention_1m' | 'retention_3m' | 'posttest'
+  kind: TestKind
   takenAt: number
   metrics: Record<string, unknown>
 }

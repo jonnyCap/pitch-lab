@@ -7,6 +7,7 @@ import { getTimbre, nearestSample, type TimbreId } from './instruments'
 import { pinkNoise, shepardGlissando, toAudioBuffer } from './interference'
 import { renderTone } from './synth'
 import { contextTimeToPerfMs } from './timing'
+import { hzToMidi } from '@/music/pitch'
 
 /** Scheduling lead so the first sample is never late (and onset time is exact). */
 const LEAD_SEC = 0.06
@@ -81,6 +82,29 @@ export class AudioEngine {
       return this.start(ctx, src, out, t0, TONE_SEC)
     }
     return this.start(ctx, src, out, ctx.currentTime + LEAD_SEC)
+  }
+
+  /** Plain sine tone at an arbitrary frequency (pitch-memory check). */
+  async playSine(hz: number, durationSec: number): Promise<PlayedSound> {
+    const ctx = await this.unlock()
+    const midi = hzToMidi(hz)
+    const key = `sine:${midi.toFixed(4)}:${durationSec}:${ctx.sampleRate}`
+    const buf = await this.cached(key, async () =>
+      toAudioBuffer(
+        ctx,
+        renderTone({
+          sampleRate: ctx.sampleRate,
+          midi,
+          waveform: 'sine',
+          durationSec,
+          attackSec: 0.01,
+          releaseSec: Math.min(0.05, durationSec / 4),
+        }),
+      ),
+    )
+    const src = ctx.createBufferSource()
+    src.buffer = buf
+    return this.start(ctx, src, src, ctx.currentTime + LEAD_SEC)
   }
 
   /** Descending Shepard glissando used before no-feedback and test blocks. */

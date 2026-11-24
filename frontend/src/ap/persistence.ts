@@ -19,7 +19,7 @@ export function toTrialRecord(t: RecordedTrial, sessionId: string, levelId: stri
     pitchClass: t.stimulus.pitchClass,
     octave: t.stimulus.octave,
     timbre: t.stimulus.timbre,
-    isDistractor: false,
+    isDistractor: t.stimulus.isDistractor,
     prevMidi: t.prevMidi,
     response: t.response,
     correct: t.correct,
@@ -81,4 +81,18 @@ export async function saveTestResult(
     await db.outbox.add({ kind: 'test_result', refId: r.id, createdAt: Date.now() })
   })
   return r
+}
+
+/** Most recent AP training answers (no tests), newest first — input for adaptive practice. */
+export async function recentTrainingTrials(db: PitchLabDB, limit = 300): Promise<Trial[]> {
+  const out: Trial[] = []
+  await db.trials
+    .where('[module+ts]')
+    .between(['ap', 0], ['ap', Infinity])
+    .reverse()
+    .until(() => out.length >= limit)
+    .each((t) => {
+      if (!t.levelId.startsWith('test-')) out.push(t)
+    })
+  return out
 }

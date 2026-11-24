@@ -74,3 +74,36 @@ export function testMetrics(
     untrained: conditionMetrics(outcomes.filter((o) => !isTrained(o))),
   }
 }
+
+export type APBand = 'non-ap' | 'emerging' | 'near-ap' | 'ap-level'
+
+export const AP_BAND_LABELS: Record<APBand, string> = {
+  'non-ap': 'Starting out',
+  emerging: 'Emerging',
+  'near-ap': 'Near absolute pitch',
+  'ap-level': 'Absolute-pitch level',
+}
+
+/**
+ * Indicative classification of a test result (not a diagnosis):
+ * - ap-level: ≥ 90% exact overall, ≥ 85% exact on untrained conditions, median RT ≤ 2 s
+ *   (fast and accurate, generalising beyond the trained instrument/octaves);
+ * - near-ap: ≥ 85% exact (the UCSD-test threshold, semitone errors counted as wrong);
+ * - emerging: clearly above chance — ≥ 30% exact or mean error ≤ 1.5 semitones
+ *   (chance: ≈ 8% and 3.0);
+ * - non-ap otherwise.
+ */
+export function classify(m: TestMetrics): APBand {
+  if (
+    m.accuracy >= 0.9 &&
+    m.untrained.n > 0 &&
+    m.untrained.accuracy >= 0.85 &&
+    m.medianRtMs !== null &&
+    m.medianRtMs <= 2000
+  ) {
+    return 'ap-level'
+  }
+  if (m.accuracy >= 0.85) return 'near-ap'
+  if (m.accuracy >= 0.3 || (m.mad !== null && m.mad <= 1.5)) return 'emerging'
+  return 'non-ap'
+}

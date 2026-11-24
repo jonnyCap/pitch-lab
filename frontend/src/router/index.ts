@@ -20,6 +20,11 @@ const router = createRouter({
     },
     { path: '/progress', name: 'progress', component: () => import('@/views/ProgressView.vue') },
     {
+      path: '/pitch-memory',
+      name: 'pitch-memory',
+      component: () => import('@/views/PitchMemoryView.vue'),
+    },
+    {
       path: '/audio-check',
       name: 'audio-check',
       component: () => import('@/views/AudioCheckView.vue'),

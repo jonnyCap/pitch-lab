@@ -4,7 +4,14 @@ import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'
 import { db, type TestResult } from '@/data/db'
 import { getTimbre } from '@/audio/instruments'
-import { testMetrics, type TestMetrics } from '@/ap/assessment'
+import {
+  AP_BAND_LABELS,
+  classify,
+  testMetrics,
+  type APBand,
+  type TestMetrics,
+} from '@/ap/assessment'
+import { TEST_LABELS } from '@/ap/schedule'
 import { saveTestResult } from '@/ap/persistence'
 import type { RunResult } from '@/ap/runner'
 import { useApStore } from '@/stores/ap'
@@ -13,6 +20,9 @@ import LevelPlayer from '@/components/ap/LevelPlayer.vue'
 const props = defineProps<{ kind: TestResult['kind'] }>()
 const ap = useApStore()
 const metrics = shallowRef<TestMetrics | null>(null)
+const band = shallowRef<APBand | null>(null)
+/** Baseline captured before this test is saved (for the comparison). */
+const baseline = shallowRef<TestMetrics | null>(null)
 const attempt = shallowRef(0)
 
 onMounted(() => {
@@ -20,7 +30,7 @@ onMounted(() => {
 })
 
 const spec = computed(() => ap.testSpec(props.kind))
-const title = computed(() => (props.kind === 'pretest' ? 'Baseline test' : 'Absolute pitch test'))
+const title = computed(() => TEST_LABELS[props.kind])
 const trainedLabel = computed(() => getTimbre(ap.timbres.trained[0]!).label)
 const untrainedLabel = computed(() => getTimbre(ap.timbres.untrained).label)
 
@@ -29,11 +39,16 @@ async function onFinished(r: RunResult) {
     trainedTimbres: ap.timbres.trained,
     trainedOctaves: [4, 5, 6],
   })
+  const b = classify(m)
+  baseline.value =
+    props.kind === 'pretest' ? null : ((ap.pretest?.metrics as unknown as TestMetrics) ?? null)
   await saveTestResult(db, props.kind, {
     ...m,
+    band: b,
     timbres: spec.value.timbres,
     trials: r.outcomes.length,
   })
+  band.value = b
   await ap.refreshTests()
   metrics.value = m
 }
@@ -46,6 +61,11 @@ function onAborted(reason: string) {
 const pct = (x: number) => `${Math.round(x * 100)}%`
 const sec = (ms: number | null) => (ms === null ? '–' : `${(ms / 1000).toFixed(2)} s`)
 const mad = (x: number | null) => (x === null ? '–' : x.toFixed(2))
+const delta = (now: number, before: number | undefined) => {
+  if (before === undefined) return ''
+  const d = Math.round((now - before) * 100)
+  return d === 0 ? '±0' : d > 0 ? `+${d}` : `${d}`
+}
 </script>
 
 <template>
@@ -68,6 +88,15 @@ const mad = (x: number | null) => (x === null ? '–' : x.toFixed(2))
 
   <section v-else class="card">
     <h2>Your result</h2>
+    <p v-if="band" class="band" :data-band="band">
+      {{ AP_BAND_LABELS[band] }}
+      <small class="muted">(indicative, not a diagnosis)</small>
+    </p>
+    <p v-if="baseline" class="muted">
+      Compared with your baseline: {{ delta(metrics.accuracy, baseline.accuracy) }} percentage
+      points exactly right, average error {{ mad(baseline.mad) }} → {{ mad(metrics.mad) }}
+      semitones.
+    </p>
     <div class="grid stats">
       <div>
         <div class="value">{{ pct(metrics.accuracy) }}</div>
@@ -107,14 +136,20 @@ const mad = (x: number | null) => (x === null ? '–' : x.toFixed(2))
         </tr>
       </tbody>
     </table>
-    <p class="muted">
-      These numbers are your baseline. Retake the test after training to see what changed.
+    <p v-if="kind === 'pretest'" class="muted">
+      These numbers are your baseline. Weekly tests during training show what changed.
     </p>
     <RouterLink class="btn btn-primary" to="/trainer">Go to training</RouterLink>
   </section>
 </template>
 
 <style scoped>
+.band {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin: 0.25rem 0;
+}
 .stats {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin: 1rem 0;

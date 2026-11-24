@@ -1,32 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
-
-const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=']
-
-/** Answers every trial of the running level via the keyboard until it finishes. */
-async function playLevel(page: Page, answer: (target: number) => number) {
-  const run = page.locator('section.run')
-  await expect(run).toBeVisible()
-  let answered = 0
-  for (;;) {
-    // Wait until the next trial is listening or the level has ended.
-    const state = await page.waitForFunction(() => {
-      const el = document.querySelector('section.run') as HTMLElement | null
-      if (!el) return 'done'
-      return el.dataset.phase === 'listening' && el.dataset.e2eTarget ? el.dataset.e2eTarget : null
-    })
-    const value = (await state.jsonValue()) as string
-    if (value === 'done') break
-    const index = await run.getAttribute('data-index')
-    await page.keyboard.press(KEYS[answer(Number(value))]!)
-    answered++
-    // Wait until this trial is over: the next one started, or the level ended.
-    await page.waitForFunction((i) => {
-      const el = document.querySelector('section.run') as HTMLElement | null
-      return !el || el.dataset.index !== i || el.dataset.phase !== 'listening'
-    }, index)
-  }
-  return answered
-}
+import { expect, test } from '@playwright/test'
+import { playLevel, progress, pretest, seed } from './helpers'
 
 test('onboarding → pretest → pass the first training step → progress', async ({ page }) => {
   const errors: string[] = []
@@ -61,10 +34,18 @@ test('onboarding → pretest → pass the first training step → progress', asy
 
   // Progress persists across reloads (IndexedDB).
   await page.goto('/progress')
-  await expect(page.locator('.stat .value').nth(3)).toHaveText('1') // levels passed
-  await expect(page.getByRole('cell', { name: 'pretest' })).toBeVisible()
+  // 12 correct answers in step 1 = 12 points, +2 for each random ⭐ trial.
+  const pointsText = page.getByText(/streak · \d+ points/)
+  await expect(pointsText).toBeVisible()
+  const points = Number((await pointsText.textContent())!.match(/(\d+) points/)![1])
+  expect(points).toBeGreaterThanOrEqual(12)
+  expect((points - 12) % 2).toBe(0)
+  await expect(page.getByText('pitches in training · step 2/8')).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Baseline test' })).toBeVisible()
+  // Every answer one semitone sharp: 0% exact but mean error 1.0 → "Emerging".
+  await expect(page.getByText('Emerging').first()).toBeVisible()
   await page.reload()
-  await expect(page.locator('.stat .value').nth(3)).toHaveText('1')
+  await expect(page.getByText(`streak · ${points} points`)).toBeVisible()
 
   const counts = await page.evaluate(async () => {
     const open = indexedDB.open('pitchlab')
@@ -90,38 +71,10 @@ test('onboarding → pretest → pass the first training step → progress', asy
 })
 
 test('a no-feedback step falls back after three failures', async ({ page }) => {
-  await page.goto('/trainer')
-  // Wait until the app has opened (and created) the Dexie database.
-  await expect(page.getByRole('heading', { name: 'Set up your sound' })).toBeVisible()
-  // Seed state: onboarding done, pretest taken, at t3-s2.
-  await page.evaluate(async () => {
-    const open = indexedDB.open('pitchlab')
-    const db: IDBDatabase = await new Promise((res) => (open.onsuccess = () => res(open.result)))
-    const tx = db.transaction(['stateDocs', 'testResults'], 'readwrite')
-    tx.objectStore('stateDocs').put({
-      key: 'ap_progress',
-      version: 1,
-      updatedAt: Date.now(),
-      dirty: 1,
-      doc: {
-        schema: 1,
-        levelIndex: 1,
-        failStreak: 0,
-        passes: { 't3-s1': 1 },
-        attempts: {},
-        onboardingDone: true,
-        bestIndex: 1,
-      },
-    })
-    tx.objectStore('testResults').put({
-      id: 'seed',
-      kind: 'pretest',
-      takenAt: Date.now(),
-      metrics: {},
-    })
-    await new Promise((res) => (tx.oncomplete = res))
+  await seed(page, {
+    progress: progress({ levelIndex: 1, passes: { 't3-s1': 1 }, bestIndex: 1 }),
+    tests: [pretest()],
   })
-  await page.reload()
 
   for (let i = 0; i < 3; i++) {
     await expect(page.getByRole('heading', { name: '3 pitches · step 2 of 8' })).toBeVisible()

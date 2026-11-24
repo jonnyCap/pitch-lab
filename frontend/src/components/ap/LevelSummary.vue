@@ -1,21 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { PITCH_CLASS_NAMES_SHARP } from '@/music/pitch'
+import { PITCH_CLASS_NAMES_SHARP, type PitchClass } from '@/music/pitch'
+import { MASTERY_PASSES } from '@/ap/protocol'
 import type { LevelSummary } from '@/ap/scoring'
 import type { LevelTransition } from '@/ap/progress'
 
 const props = defineProps<{
   summary: LevelSummary
-  transition?: LevelTransition | null
+  transition?: LevelTransition | 'drill-done' | null
+  /** Mastery passes so far (shown after a mastery-level pass). */
+  masteryPasses?: number
 }>()
 defineEmits<{ continue: [] }>()
+
+const label = (r: PitchClass | 'none') => (r === 'none' ? 'not in set' : PITCH_CLASS_NAMES_SHARP[r])
 
 const message = computed(() => {
   switch (props.transition) {
     case 'advance':
       return 'Passed — on to the next step.'
+    case 'mastery-pass':
+      return `Mastery pass ${props.masteryPasses ?? ''} of ${MASTERY_PASSES} — well done.`
+    case 'drill-done':
+      return 'Focus drill done — back to your level.'
     case 'complete':
-      return 'You finished the whole ladder. Remarkable!'
+      return 'You mastered the whole ladder: all 12 pitches, fast and accurate. Remarkable!'
     case 'fallback':
       return 'Three misses in a row without feedback — back to the feedback version for more practice.'
     case 'repeat':
@@ -33,6 +42,7 @@ const message = computed(() => {
       <small class="muted">({{ summary.correct }}/{{ summary.n }})</small>
     </h2>
     <p v-if="message">{{ message }}</p>
+    <p class="points">+{{ summary.points }} points</p>
 
     <table>
       <thead>
@@ -49,15 +59,27 @@ const message = computed(() => {
             {{ p.correct }}/{{ p.n }}
           </td>
         </tr>
+        <tr v-if="summary.distractors.n">
+          <td>Not in set</td>
+          <td>
+            <span class="bar"
+              ><span
+                :style="{
+                  width: `${(summary.distractors.correct / summary.distractors.n) * 100}%`,
+                }"
+            /></span>
+            {{ summary.distractors.correct }}/{{ summary.distractors.n }}
+          </td>
+        </tr>
       </tbody>
     </table>
 
     <p v-if="summary.confusions.length" class="muted">
       Most confused:
       <span v-for="(c, i) in summary.confusions.slice(0, 3)" :key="i">
-        {{ PITCH_CLASS_NAMES_SHARP[c.target] }} → {{ PITCH_CLASS_NAMES_SHARP[c.response] }} ({{
-          c.count
-        }}×){{ i < Math.min(2, summary.confusions.length - 1) ? ', ' : '' }}
+        {{ PITCH_CLASS_NAMES_SHARP[c.target] }} → {{ label(c.response) }} ({{ c.count }}×){{
+          i < Math.min(2, summary.confusions.length - 1) ? ', ' : ''
+        }}
       </span>
     </p>
     <p class="muted">
@@ -71,6 +93,11 @@ const message = computed(() => {
 </template>
 
 <style scoped>
+.points {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+  color: var(--accent);
+}
 .summary h2 {
   margin: 0;
   font-size: 2rem;

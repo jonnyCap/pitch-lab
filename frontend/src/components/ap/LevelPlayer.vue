@@ -1,42 +1,51 @@
 <script setup lang="ts">
 /**
- * Plays one level (training step or test) end to end: intro with optional
+ * Plays one level (training step, drill or test) end to end: intro with optional
  * sample listening → LevelRunner → emits the result. Trials are persisted as
  * they happen. Leaving the tab aborts the level (timing would be invalid).
+ * Feedback steps adapt sampling to recent confusions; drills focus one pitch.
  */
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { audio } from '@/audio/engine'
 import { getTimbre } from '@/audio/instruments'
 import { db } from '@/data/db'
 import { mulberry32, randomSeed } from '@/lib/random'
 import { midiOf, PITCH_CLASS_NAMES_SHARP, type PitchClass } from '@/music/pitch'
 import type { LevelSpec } from '@/ap/protocol'
-import { endSession, saveTrial, startSession } from '@/ap/persistence'
+import { adaptiveWeights, confusionPartners, drillWeights } from '@/ap/adaptive'
+import { endSession, recentTrainingTrials, saveTrial, startSession } from '@/ap/persistence'
 import { LevelRunner, type RunnerState, type RunResult } from '@/ap/runner'
-import { generateSequence } from '@/ap/sequencer'
-import PitchWheel from './PitchWheel.vue'
+import { generateSequence, type SequenceSpec } from '@/ap/sequencer'
+import PitchWheel, { type WheelAnswer } from './PitchWheel.vue'
 
 /** E2E mode (vite --mode e2e): short waits + exposes the target for scripted answers. */
 const E2E = import.meta.env.MODE === 'e2e'
 const E2E_TIMING = { shepardSec: 0.3, itiMinMs: 40, itiMaxMs: 60, feedbackMs: 60 }
 
-const props = defineProps<{ spec: LevelSpec }>()
+const props = defineProps<{
+  spec: LevelSpec
+  /** Start is not allowed before this time (12 h mastery gap). */
+  blockedUntil?: number | null
+}>()
 const emit = defineEmits<{
   finished: [result: RunResult]
   aborted: [reason: string]
+  /** True while the level is running (parents hide surrounding chrome). */
+  running: [running: boolean]
 }>()
 
 const stage = ref<'intro' | 'loading' | 'running'>('intro')
+watch(stage, (s) => emit('running', s === 'running'))
 const state = shallowRef<RunnerState | null>(null)
 const error = ref<string | null>(null)
 const now = ref(performance.now())
 let runner: LevelRunner | null = null
-const e2eSequence = shallowRef<readonly { pitchClass: PitchClass }[]>([])
-const e2eTarget = computed(() =>
-  E2E && state.value?.phase === 'listening'
-    ? String(e2eSequence.value[state.value.index]?.pitchClass ?? '')
-    : undefined,
-)
+const e2eSequence = shallowRef<readonly { pitchClass: PitchClass; isDistractor: boolean }[]>([])
+const e2eTarget = computed(() => {
+  if (!E2E || state.value?.phase !== 'listening') return undefined
+  const s = e2eSequence.value[state.value.index]
+  return s ? (s.isDistractor ? 'none' : String(s.pitchClass)) : undefined
+})
 let ticker: ReturnType<typeof setInterval> | undefined
 
 const timbreLabels = computed(() => props.spec.timbres.map((t) => getTimbre(t).label))
@@ -52,14 +61,25 @@ const countdown = computed(() => {
   return end ? Math.max(0, Math.ceil((end - now.value) / 1000)) : null
 })
 
-const highlight = computed(() => {
+const highlight = computed<{ correct: WheelAnswer | null; wrong: WheelAnswer | null }>(() => {
   const fb = state.value?.phase === 'feedback' ? state.value.feedback : null
   if (!fb) return { correct: null, wrong: null }
+  const right: WheelAnswer = fb.isDistractor ? 'none' : fb.target
   return {
-    correct: fb.target,
-    wrong: !fb.correct && typeof fb.response === 'number' ? fb.response : null,
+    correct: right,
+    wrong: !fb.correct && fb.response !== 'timeout' ? fb.response : null,
   }
 })
+
+const blockedText = computed(() =>
+  props.blockedUntil
+    ? new Date(props.blockedUntil).toLocaleString([], {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null,
+)
 
 // --- Sample listening (training only, before interference) ----------------
 const sampleTimbre = ref(0)
@@ -76,7 +96,19 @@ async function start() {
   try {
     await audio.unlock()
     const rng = mulberry32(randomSeed())
-    const sequence = generateSequence(props.spec, (t) => getTimbre(t).range, rng)
+    const seqSpec: SequenceSpec = { ...props.spec }
+    if (props.spec.focus) {
+      seqSpec.weights = drillWeights(
+        props.spec.focus.pitch,
+        props.spec.focus.partners,
+        props.spec.pitchSet,
+      )
+    } else if (props.spec.adaptive) {
+      const recent = await recentTrainingTrials(db, 300)
+      seqSpec.weights = adaptiveWeights(recent, props.spec.pitchSet)
+      seqSpec.partners = confusionPartners(recent, props.spec.pitchSet)
+    }
+    const sequence = generateSequence(seqSpec, (t) => getTimbre(t).range, rng)
     const byTimbre = new Map<string, number[]>()
     for (const s of sequence) byTimbre.set(s.timbre, [...(byTimbre.get(s.timbre) ?? []), s.midi])
     await Promise.all([...byTimbre].map(([t, midis]) => audio.preload(t, midis)))
@@ -92,6 +124,8 @@ async function start() {
       ...(E2E ? E2E_TIMING : {}),
     })
     stage.value = 'running'
+    await nextTick()
+    document.querySelector('section.run')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
     ticker = setInterval(() => (now.value = performance.now()), 250)
     const result = await runner.run()
     clearInterval(ticker)
@@ -104,8 +138,8 @@ async function start() {
   }
 }
 
-function answer(pc: PitchClass, timeStamp: number) {
-  runner?.respond(pc, timeStamp)
+function answer(a: WheelAnswer, timeStamp: number) {
+  runner?.respond(a, timeStamp)
 }
 
 function quit(reason = 'You left the level.') {
@@ -124,6 +158,7 @@ function onVisibility() {
 
 onMounted(() => document.addEventListener('visibilitychange', onVisibility))
 onBeforeUnmount(() => {
+  emit('running', false)
   document.removeEventListener('visibilitychange', onVisibility)
   runner?.abort()
   clearInterval(ticker)
@@ -144,9 +179,27 @@ onBeforeUnmount(() => {
       <li>
         {{ spec.trials }} notes · {{ spec.feedback ? 'with feedback' : 'no feedback' }} · answer
         within {{ spec.deadlineMs / 1000 }} s
-        <template v-if="!isTest"> · pass at {{ Math.round(spec.passAccuracy * 100) }}%</template>
+        <template v-if="spec.kind === 'train'">
+          · pass at {{ Math.round(spec.passAccuracy * 100) }}%</template
+        >
       </li>
+      <li v-if="spec.allowNone">
+        Some notes are <strong>not in your set</strong> — answer those with “Not in my set” (key N).
+      </li>
+      <li v-if="spec.specialRate > 0" class="muted">⭐ trials are worth 3 points.</li>
     </ul>
+    <p v-if="spec.focus" class="note">
+      Extra practice on <strong>{{ PITCH_CLASS_NAMES_SHARP[spec.focus.pitch] }}</strong>, your
+      weakest pitch in the last levels{{
+        spec.focus.partners.length
+          ? `, mixed with the notes you confuse it with (${spec.focus.partners.map((p) => PITCH_CLASS_NAMES_SHARP[p]).join(', ')})`
+          : ''
+      }}.
+    </p>
+    <p v-if="spec.final" class="note">
+      <strong>Mastery level.</strong> Pass it four times; the fourth pass must be at least 12 hours
+      after the third, so it shows long-term memory, not just today's practice.
+    </p>
 
     <div v-if="!isTest" class="samples">
       <p class="muted">Listen to the pitches as often as you like before you start:</p>
@@ -163,7 +216,14 @@ onBeforeUnmount(() => {
     </p>
 
     <p v-if="error" class="error" role="alert">{{ error }}</p>
-    <button class="btn btn-primary start" :disabled="stage === 'loading'" @click="start">
+    <p v-if="blockedText" class="note" role="status">
+      Come back after <strong>{{ blockedText }}</strong> for the final pass.
+    </p>
+    <button
+      class="btn btn-primary start"
+      :disabled="stage === 'loading' || !!blockedUntil"
+      @click="start"
+    >
       {{ stage === 'loading' ? 'Loading sounds…' : 'Start' }}
     </button>
   </section>
@@ -183,12 +243,16 @@ onBeforeUnmount(() => {
             : `Note ${(state?.index ?? 0) + 1} / ${state?.total}`
         }}
       </span>
+      <span v-if="spec.kind !== 'test'" class="points" aria-label="points">
+        {{ state?.points ?? 0 }} pts
+      </span>
       <button class="btn small" @click="quit()">Stop</button>
     </div>
     <progress :value="state?.index ?? 0" :max="state?.total ?? 1" />
 
     <PitchWheel
       :options="spec.responseOptions"
+      :allow-none="spec.allowNone"
       :disabled="state?.phase !== 'listening'"
       :correct="highlight.correct"
       :wrong="highlight.wrong"
@@ -200,8 +264,8 @@ onBeforeUnmount(() => {
           <span class="muted">clearing</span>
         </template>
         <template v-else-if="state?.phase === 'listening'">
-          <span class="big">♪</span>
-          <span class="muted">which note?</span>
+          <span class="big">{{ state.special ? '⭐' : '♪' }}</span>
+          <span class="muted">{{ state.special ? '3 points!' : 'which note?' }}</span>
         </template>
         <template v-else-if="state?.phase === 'feedback' && state.feedback">
           <span class="big" :class="state.feedback.correct ? 'ok' : 'bad'">
@@ -210,7 +274,9 @@ onBeforeUnmount(() => {
           <span>
             {{ state.feedback.response === 'timeout' ? 'Too slow — ' : '' }}it was
             <strong>{{ PITCH_CLASS_NAMES_SHARP[state.feedback.target] }}</strong>
+            <template v-if="state.feedback.isDistractor"> — not in your set</template>
           </span>
+          <span v-if="state.feedback.points > 1" class="muted">+{{ state.feedback.points }}</span>
         </template>
         <template v-else>
           <span class="muted">…</span>
@@ -263,6 +329,12 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
+}
+.points {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--accent);
 }
 .btn.small {
   padding: 0.3rem 0.75rem;

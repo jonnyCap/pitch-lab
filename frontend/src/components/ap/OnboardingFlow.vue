@@ -4,7 +4,7 @@ import { audio } from '@/audio/engine'
 import { midiOf, type PitchClass } from '@/music/pitch'
 
 const props = defineProps<{ timbre: string }>()
-const emit = defineEmits<{ done: [] }>()
+const emit = defineEmits<{ done: [withPitchMemory: boolean] }>()
 
 const step = ref(0)
 const volume = ref(0.8)
@@ -83,7 +83,10 @@ async function testTone() {
       </p>
       <div class="row">
         <button class="btn" @click="step = 1">Back</button>
-        <button class="btn btn-primary" @click="emit('done')">Continue to the test</button>
+        <button class="btn btn-primary" @click="emit('done', false)">Continue to the test</button>
+        <button class="btn" @click="emit('done', true)">
+          Optional: 3-minute pitch memory check first
+        </button>
       </div>
     </template>
   </section>

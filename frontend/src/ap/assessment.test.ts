@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PitchClass } from '@/music/pitch'
-import { testMetrics } from './assessment'
+import { classify, testMetrics, type TestMetrics } from './assessment'
 import { scoreResponse, type TrialOutcome } from './scoring'
 
 const o = (
@@ -43,5 +43,48 @@ describe('testMetrics', () => {
     expect(m.untrained.n).toBe(2) // harp, or octave 3
     expect(m.byTimbre['harp']!.mad).toBe(6)
     expect(m.byOctave['3']!.mad).toBeNull()
+  })
+})
+
+describe('classify', () => {
+  const base = (over: Partial<TestMetrics>): TestMetrics =>
+    ({
+      n: 96,
+      accuracy: 0,
+      accuracyWithin1: 0,
+      mad: 3,
+      medianRtMs: 3000,
+      timeouts: 0,
+      vanHedgerIndex: null,
+      byTimbre: {},
+      byOctave: {},
+      trained: { n: 48, accuracy: 0, accuracyWithin1: 0, mad: 3, medianRtMs: 3000 },
+      untrained: { n: 48, accuracy: 0, accuracyWithin1: 0, mad: 3, medianRtMs: 3000 },
+      ...over,
+    }) as TestMetrics
+  const untrained = (accuracy: number) => ({
+    n: 48,
+    accuracy,
+    accuracyWithin1: accuracy,
+    mad: 0.1,
+    medianRtMs: 1500,
+  })
+
+  it('bands', () => {
+    expect(classify(base({ accuracy: 0.08, mad: 3 }))).toBe('non-ap')
+    expect(classify(base({ accuracy: 0.2, mad: 1.4 }))).toBe('emerging')
+    expect(classify(base({ accuracy: 0.35, mad: 2 }))).toBe('emerging')
+    expect(classify(base({ accuracy: 0.87, mad: 0.2 }))).toBe('near-ap')
+    expect(
+      classify(base({ accuracy: 0.95, mad: 0.1, medianRtMs: 1500, untrained: untrained(0.9) })),
+    ).toBe('ap-level')
+  })
+  it('AP level requires speed and generalisation', () => {
+    expect(
+      classify(base({ accuracy: 0.95, mad: 0.1, medianRtMs: 2600, untrained: untrained(0.9) })),
+    ).toBe('near-ap')
+    expect(
+      classify(base({ accuracy: 0.95, mad: 0.1, medianRtMs: 1500, untrained: untrained(0.7) })),
+    ).toBe('near-ap')
   })
 })

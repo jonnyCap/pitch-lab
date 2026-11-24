@@ -41,6 +41,8 @@ const stim = (midi: number): Stimulus => ({
   pitchClass: (midi % 12) as Stimulus['pitchClass'],
   octave: Math.floor(midi / 12) - 1,
   timbre: 'piano',
+  isDistractor: false,
+  special: false,
 })
 
 beforeEach(() => {
@@ -73,7 +75,13 @@ describe('LevelRunner', () => {
     expect(runner.respond(4)).toBe(false) // only one answer per trial
     await vi.advanceTimersByTimeAsync(0)
     expect(runner.snapshot.phase).toBe('feedback')
-    expect(runner.snapshot.feedback).toEqual({ target: 4, response: 4, correct: true })
+    expect(runner.snapshot.feedback).toEqual({
+      target: 4,
+      response: 4,
+      correct: true,
+      isDistractor: false,
+      points: 1,
+    })
 
     // Let feedback + ITI pass, then answer the 2nd trial wrongly.
     await vi.advanceTimersByTimeAsync(1400 + 2000)
@@ -162,5 +170,47 @@ describe('LevelRunner', () => {
     expect(await done).toBeNull()
     expect(runner.snapshot.phase).toBe('aborted')
     expect(trials).toHaveLength(0)
+  })
+
+  it('accepts "not in my set" only where allowed and scores distractors', async () => {
+    const { audio } = fakeAudio()
+    const trials: RecordedTrial[] = []
+    const spec = level('t4-s1') // 4 pitches: distractors allowed
+    const seq = [
+      { ...stim(68), isDistractor: true },
+      { ...stim(64), special: true },
+    ]
+    const runner = new LevelRunner(spec, seq, {
+      audio,
+      rng: mulberry32(1),
+      onTrial: (t) => void trials.push(t),
+      itiMinMs: 100,
+      itiMaxMs: 100,
+      feedbackMs: 100,
+    })
+    const done = runner.run()
+    await vi.advanceTimersByTimeAsync(LEAD + 500)
+    expect(runner.respond('none', performance.now())).toBe(true)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(runner.snapshot.feedback).toMatchObject({ isDistractor: true, correct: true, points: 1 })
+    await vi.advanceTimersByTimeAsync(100 + 100 + LEAD + 300)
+    expect(runner.snapshot.special).toBe(true)
+    expect(runner.respond(4, performance.now())).toBe(true)
+    await vi.advanceTimersByTimeAsync(1000)
+    const result = await done
+    expect(trials.map((t) => [t.response, t.correct, t.isDistractor, t.special])).toEqual([
+      ['none', true, true, false],
+      [4, true, false, true],
+    ])
+    expect(result!.summary.points).toBe(1 + 3)
+    expect(result!.summary.distractors).toEqual({ n: 1, correct: 1 })
+  })
+
+  it('rejects "not in my set" when the level does not offer it', async () => {
+    const { audio } = fakeAudio()
+    const runner = new LevelRunner(level('t3-s1'), [stim(64)], { audio, rng: mulberry32(1) })
+    void runner.run()
+    await vi.advanceTimersByTimeAsync(LEAD)
+    expect(runner.respond('none')).toBe(false)
   })
 })

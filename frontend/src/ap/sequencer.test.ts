@@ -18,8 +18,9 @@ function counts<T>(xs: readonly T[]): number[] {
 
 function checkInvariants(seq: Stimulus[], spec: { trials: number; pitchSet: readonly number[] }) {
   expect(seq).toHaveLength(spec.trials)
-  for (const s of seq) expect(spec.pitchSet).toContain(s.pitchClass)
-  const c = counts(seq.map((s) => s.pitchClass))
+  const inSet = seq.filter((s) => !s.isDistractor)
+  for (const s of inSet) expect(spec.pitchSet).toContain(s.pitchClass)
+  const c = counts(inSet.map((s) => s.pitchClass))
   expect(c).toHaveLength(spec.pitchSet.length)
   expect(Math.max(...c) - Math.min(...c)).toBeLessThanOrEqual(1)
   for (let i = 1; i < seq.length; i++) expect(seq[i]!.pitchClass).not.toBe(seq[i - 1]!.pitchClass)
@@ -78,5 +79,89 @@ describe('generateSequence', () => {
   it('throws when a pitch class cannot be played by any timbre', () => {
     const level = ladder[0]!
     expect(() => generateSequence(level, () => [0, 10], mulberry32(1))).toThrow()
+  })
+})
+
+describe('distractors, weights, partners, special trials', () => {
+  const level = ladder.find((l) => l.id === 't6-s3')! // 6 pitches, distractors on
+  it('mixes ~15% out-of-set tones, mostly chromatic neighbours of the set', () => {
+    let neighbours = 0
+    let total = 0
+    for (let seed = 1; seed <= 50; seed++) {
+      const seq = generateSequence(level, wide, mulberry32(seed))
+      const d = seq.filter((s) => s.isDistractor)
+      expect(d).toHaveLength(Math.round(level.trials * 0.15))
+      for (const s of d) {
+        expect(level.pitchSet).not.toContain(s.pitchClass)
+        total++
+        if (
+          level.pitchSet.some(
+            (p) => (p + 1) % 12 === s.pitchClass || (p + 11) % 12 === s.pitchClass,
+          )
+        )
+          neighbours++
+      }
+      // In-set tones stay balanced.
+      const c = counts(seq.filter((s) => !s.isDistractor).map((s) => s.pitchClass))
+      expect(Math.max(...c) - Math.min(...c)).toBeLessThanOrEqual(1)
+      for (let i = 1; i < seq.length; i++)
+        expect(seq[i]!.pitchClass).not.toBe(seq[i - 1]!.pitchClass)
+    }
+    expect(neighbours / total).toBeGreaterThan(0.6)
+  })
+
+  it('allocates in proportion to weights', () => {
+    const seq = generateSequence(
+      {
+        pitchSet: [4, 5, 6],
+        octaves: [4],
+        timbres: ['piano'],
+        trials: 30,
+        minLeap: 0,
+        weights: { 4: 1, 5: 1, 6: 3 },
+      },
+      wide,
+      mulberry32(9),
+    )
+    expect(seq.filter((s) => s.pitchClass === 6)).toHaveLength(18)
+    expect(seq.filter((s) => s.pitchClass === 4)).toHaveLength(6)
+  })
+
+  it('plays confusion partners back to back more often', () => {
+    const base = {
+      pitchSet: [0, 2, 4, 5, 7, 9] as const,
+      octaves: [4, 5],
+      timbres: ['piano'],
+      trials: 30,
+      minLeap: 0,
+    }
+    const adjacent = (seq: Stimulus[]) =>
+      seq.slice(1).filter((s, i) => {
+        const p = seq[i]!.pitchClass
+        return (p === 4 && s.pitchClass === 5) || (p === 5 && s.pitchClass === 4)
+      }).length
+    let withP = 0
+    let without = 0
+    for (let seed = 1; seed <= 40; seed++) {
+      withP += adjacent(
+        generateSequence({ ...base, partners: { 4: [5], 5: [4] } }, wide, mulberry32(seed)),
+      )
+      without += adjacent(generateSequence(base, wide, mulberry32(seed)))
+    }
+    expect(withP).toBeGreaterThan(without * 1.5)
+  })
+
+  it('marks a few in-set trials as special, never distractors', () => {
+    let special = 0
+    for (let seed = 1; seed <= 30; seed++) {
+      for (const s of generateSequence({ ...level, specialRate: 0.2 }, wide, mulberry32(seed))) {
+        if (s.special) {
+          special++
+          expect(s.isDistractor).toBe(false)
+        }
+      }
+    }
+    expect(special).toBeGreaterThan(0)
+    expect(generateSequence(level, wide, mulberry32(1)).length).toBe(level.trials)
   })
 })

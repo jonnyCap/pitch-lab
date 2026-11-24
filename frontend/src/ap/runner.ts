@@ -16,7 +16,13 @@ import type { TimbreId } from '@/audio/instruments'
 import type { TrialResponse } from '@/data/db'
 import type { Rng } from '@/lib/random'
 import { SHEPARD_SEC, type LevelSpec } from './protocol'
-import { scoreResponse, summarizeLevel, type LevelSummary, type TrialOutcome } from './scoring'
+import {
+  scoreResponse,
+  summarizeLevel,
+  trialPoints,
+  type LevelSummary,
+  type TrialOutcome,
+} from './scoring'
 import type { Stimulus } from './sequencer'
 
 export interface RunnerAudio {
@@ -43,7 +49,13 @@ export interface RunnerFeedback {
   target: PitchClass
   response: TrialResponse
   correct: boolean
+  /** The tone was outside the learner's set. */
+  isDistractor: boolean
+  /** Points earned on this trial. */
+  points: number
 }
+
+export type RunnerAnswer = PitchClass | 'none'
 
 export interface RunnerState {
   phase: RunnerPhase
@@ -54,6 +66,10 @@ export interface RunnerState {
   feedback: RunnerFeedback | null
   /** performance.now() at which the interference ends (for a countdown). */
   interferenceEndsAt: number | null
+  /** The current trial is a 3-point ⭐ special trial. */
+  special: boolean
+  /** Points collected so far in this level. */
+  points: number
 }
 
 export interface RecordedTrial extends TrialOutcome {
@@ -88,7 +104,7 @@ export class LevelRunner {
   private readonly clock: RunnerClock
   private aborted = false
   private sounds = new Set<PlayedSound>()
-  private pendingResponse: ((r: { response: PitchClass; at: number }) => void) | null = null
+  private pendingResponse: ((r: { response: RunnerAnswer; at: number }) => void) | null = null
 
   constructor(
     private readonly spec: LevelSpec,
@@ -102,6 +118,8 @@ export class LevelRunner {
       total: sequence.length,
       feedback: null,
       interferenceEndsAt: null,
+      special: false,
+      points: 0,
     }
   }
 
@@ -110,9 +128,13 @@ export class LevelRunner {
   }
 
   /** Accepts an answer during the response window. Returns false if ignored. */
-  respond(response: PitchClass, eventTimeStamp: number = this.clock.now()): boolean {
+  respond(response: RunnerAnswer, eventTimeStamp: number = this.clock.now()): boolean {
     if (this.state.phase !== 'listening' || !this.pendingResponse) return false
-    if (!this.spec.responseOptions.includes(response)) return false
+    if (
+      response === 'none' ? !this.spec.allowNone : !this.spec.responseOptions.includes(response)
+    ) {
+      return false
+    }
     const resolve = this.pendingResponse
     this.pendingResponse = null
     resolve({ response, at: eventTimeStamp })
@@ -143,13 +165,21 @@ export class LevelRunner {
         const stim = this.sequence[i]!
         const trial = await this.runTrial(stim, prev, i)
         outcomes.push(trial)
+        const points = trialPoints(trial)
+        this.set({ points: this.state.points + points })
         await this.deps.onTrial?.(trial)
         this.check()
 
         if (this.spec.feedback) {
           this.set({
             phase: 'feedback',
-            feedback: { target: stim.pitchClass, response: trial.response, correct: trial.correct },
+            feedback: {
+              target: stim.pitchClass,
+              response: trial.response,
+              correct: trial.correct,
+              isDistractor: stim.isDistractor,
+              points,
+            },
           })
           await this.play(this.deps.audio.playTone(stim.timbre, stim.midi), false)
           await this.sleep(this.deps.feedbackMs ?? 1400)
@@ -182,8 +212,8 @@ export class LevelRunner {
     prev: Stimulus | null,
     index: number,
   ): Promise<RecordedTrial> {
-    this.set({ phase: 'listening', index, feedback: null })
-    const responded = new Promise<{ response: PitchClass; at: number }>((resolve) => {
+    this.set({ phase: 'listening', index, feedback: null, special: stim.special })
+    const responded = new Promise<{ response: RunnerAnswer; at: number }>((resolve) => {
       this.pendingResponse = resolve
     })
     const sound = await this.play(this.deps.audio.playTone(stim.timbre, stim.midi), false)
@@ -199,7 +229,7 @@ export class LevelRunner {
 
     const response: TrialResponse = r ? r.response : 'timeout'
     const rtMs = r ? Math.max(0, Math.round(r.at - onset)) : null
-    const scored = scoreResponse(stim.pitchClass, response, rtMs, deadline)
+    const scored = scoreResponse(stim.pitchClass, response, rtMs, deadline, stim.isDistractor)
     return {
       stimulus: stim,
       target: stim.pitchClass,
@@ -210,6 +240,8 @@ export class LevelRunner {
       prevMidi: prev?.midi ?? null,
       deadlineMs: deadline,
       feedback: this.spec.feedback,
+      isDistractor: stim.isDistractor,
+      special: stim.special,
       ...scored,
     }
   }

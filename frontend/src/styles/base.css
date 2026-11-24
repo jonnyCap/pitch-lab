@@ -8,6 +8,9 @@
   --accent-contrast: #f0fdfa;
   --ok: #15803d;
   --bad: #b91c1c;
+  /* Chart tokens (validated with the dataviz palette checker against --surface) */
+  --series: #0d9488;
+  --grid: #e2e8f0;
   --radius: 12px;
   color-scheme: light;
   font-family:
@@ -29,6 +32,8 @@
     --accent-contrast: #042f2e;
     --ok: #4ade80;
     --bad: #f87171;
+    --series: #13a89a;
+    --grid: #1e293b;
     color-scheme: dark;
   }
 }
