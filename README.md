@@ -19,7 +19,12 @@ Pitch Lab is a web app (PWA) for learning **music fundamentals** and training **
   - **Classification:** results get an indicative AP-level band.
   - **Pitch memory:** an optional check after Van Hedger et al. 2019.
 - **Motivation.** Points (⭐ trials score 3), a daily goal (30 min), a weekly goal (5 h), a streak, and progress charts.
-- **Fundamentals.** Notes and staff reading, intervals, scales, keys, chords and rhythm, with FSRS spaced repetition for the facts.
+- **Fundamentals.**
+  - **Lessons:** short interactive lessons on the keyboard, treble clef, bass clef, accidentals and intervals. They show real notation (VexFlow) and have play buttons.
+  - **Practice decks** (keyboard, treble, bass, staff → keyboard, intervals by ear and on the staff), scheduled with FSRS spaced repetition and graded automatically by correctness and speed.
+  - **New items** are introduced only while recent accuracy is ≥ 80%.
+  - **Ear training** starts every question on a random note.
+  - **Planned (M4):** scales, keys, chords and rhythm.
 - **Offline-first.** Every trial is stored locally in IndexedDB and synced to the API when online.
 
 ## Tech stack

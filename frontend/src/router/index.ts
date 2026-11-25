@@ -12,11 +12,18 @@ const router = createRouter({
       component: () => import('@/views/TestView.vue'),
       props: true,
     },
+    { path: '/learn', name: 'learn', component: () => import('@/views/LearnView.vue') },
     {
-      path: '/learn',
-      name: 'learn',
-      component: () => import('@/views/ComingSoonView.vue'),
-      props: { title: 'Music fundamentals', milestone: 'M3' },
+      path: '/learn/lesson/:id',
+      name: 'lesson',
+      component: () => import('@/views/LessonView.vue'),
+      props: true,
+    },
+    {
+      path: '/learn/practice/:deck(keyboard|treble|bass|staff-keys|ear-intervals|sight-intervals)',
+      name: 'practice',
+      component: () => import('@/views/PracticeView.vue'),
+      props: true,
     },
     { path: '/progress', name: 'progress', component: () => import('@/views/ProgressView.vue') },
     {

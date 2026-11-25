@@ -59,29 +59,54 @@ export class AudioEngine {
   }
 
   async playTone(timbre: TimbreId, midi: number): Promise<PlayedSound> {
+    const [sound] = await this.playTones(timbre, [midi], [0], TONE_SEC)
+    return sound!
+  }
+
+  /**
+   * Schedules several tones of one timbre against a common start time —
+   * `offsetsSec[i]` after it, each lasting `durationSec` (≤ ~1.1 s for samples).
+   * Offsets of 0 give a sample-accurate harmonic interval / chord.
+   */
+  async playTones(
+    timbre: TimbreId,
+    midis: readonly number[],
+    offsetsSec: readonly number[],
+    durationSec = TONE_SEC,
+  ): Promise<PlayedSound[]> {
     const ctx = await this.unlock()
+    const buffers = await Promise.all(midis.map((m) => this.toneBuffer(ctx, timbre, m)))
+    const t0 = ctx.currentTime + LEAD_SEC
+    return midis.map((m, i) =>
+      this.scheduleTone(ctx, timbre, m, buffers[i]!, t0 + (offsetsSec[i] ?? 0), durationSec),
+    )
+  }
+
+  private scheduleTone(
+    ctx: AudioContext,
+    timbre: TimbreId,
+    midi: number,
+    buffer: AudioBuffer,
+    when: number,
+    durationSec: number,
+  ): PlayedSound {
     const def = getTimbre(timbre)
-    const buffer = await this.toneBuffer(ctx, timbre, midi)
     const src = ctx.createBufferSource()
     src.buffer = buffer
-    let out: AudioNode = src
-
+    // Fade out at the end of the stimulus (samples are longer; synth tones have their own envelope).
+    const g = ctx.createGain()
+    src.connect(g)
+    const fade = Math.min(SAMPLE_FADE_SEC, durationSec / 4)
     if (def.source.kind === 'samples') {
       src.playbackRate.value = nearestSample(
         def.source.notes,
         midi,
         def.source.detuneCents,
       ).playbackRate
-      // Trim recorded notes to the stimulus length with a short fade-out.
-      const g = ctx.createGain()
-      src.connect(g)
-      out = g
-      const t0 = ctx.currentTime + LEAD_SEC
-      g.gain.setValueAtTime(1, t0 + TONE_SEC - SAMPLE_FADE_SEC)
-      g.gain.linearRampToValueAtTime(0, t0 + TONE_SEC)
-      return this.start(ctx, src, out, t0, TONE_SEC)
     }
-    return this.start(ctx, src, out, ctx.currentTime + LEAD_SEC)
+    g.gain.setValueAtTime(1, when + durationSec - fade)
+    g.gain.linearRampToValueAtTime(0, when + durationSec)
+    return this.start(ctx, src, g, when, durationSec)
   }
 
   /** Plain sine tone at an arbitrary frequency (pitch-memory check). */

@@ -5,6 +5,8 @@
  */
 import Dexie, { type EntityTable } from 'dexie'
 import type { PitchClass } from '@/music/pitch'
+import type { StoredCard } from '@/learn/srs'
+import type { ReviewRecord } from '@/learn/session'
 
 export type TrialResponse = PitchClass | 'none' | 'timeout'
 
@@ -57,7 +59,7 @@ export interface TestResult {
   metrics: Record<string, unknown>
 }
 
-export type OutboxKind = 'trial' | 'session' | 'test_result'
+export type OutboxKind = 'trial' | 'session' | 'test_result' | 'review' | 'srs_card'
 
 export interface OutboxItem {
   seq?: number // auto-increment
@@ -72,6 +74,8 @@ export type PitchLabDB = Dexie & {
   stateDocs: EntityTable<StateDoc, 'key'>
   testResults: EntityTable<TestResult, 'id'>
   outbox: EntityTable<OutboxItem, 'seq'>
+  srsCards: EntityTable<StoredCard, 'id'>
+  reviews: EntityTable<ReviewRecord, 'id'>
 }
 
 export function createDB(name = 'pitchlab'): PitchLabDB {
@@ -82,6 +86,11 @@ export function createDB(name = 'pitchlab'): PitchLabDB {
     stateDocs: 'key, dirty',
     testResults: 'id, kind, takenAt',
     outbox: '++seq, kind',
+  })
+  // v2: fundamentals — FSRS cards and the review log.
+  db.version(2).stores({
+    srsCards: 'id, deck, [deck+item], dirty',
+    reviews: 'id, deck, ts, [deck+ts]',
   })
   return db
 }
