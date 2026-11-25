@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router'
 import { db } from '@/data/db'
 import { DECKS, type DeckDef, type ModuleId } from '@/learn/decks'
 import { deckStats, type DeckStats } from '@/learn/store'
-import { LESSONS } from '@/content/lessons'
+import { ALL_LESSONS } from '@/content/lessons'
 import { minutesOn } from '@/ap/engagement'
 import { useApStore } from '@/stores/ap'
 
@@ -19,6 +19,16 @@ const MODULES: { id: ModuleId; title: string; text: string }[] = [
     text: 'Note names, the keyboard, treble and bass clef, accidentals.',
   },
   { id: 'intervals', title: 'Intervals', text: 'Hear and read the distance between two notes.' },
+  {
+    id: 'harmony',
+    title: 'Scales, keys & chords',
+    text: 'Major, minor and modal scales, key signatures, triads, seventh chords and inversions.',
+  },
+  {
+    id: 'rhythm',
+    title: 'Rhythm',
+    text: 'Note values, time signatures and reading rhythms by tapping.',
+  },
 ]
 
 onMounted(async () => {
@@ -32,7 +42,7 @@ onMounted(async () => {
 })
 
 const decksOf = (m: ModuleId): DeckDef[] => DECKS.filter((d) => d.module === m)
-const lessonsOf = (m: ModuleId) => LESSONS.filter((l) => l.module === m)
+const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 </script>
 
 <template>
@@ -74,6 +84,13 @@ const lessonsOf = (m: ModuleId) => LESSONS.filter((l) => l.module === m)
         <RouterLink class="btn btn-primary" :to="{ name: 'practice', params: { deck: d.id } }">
           {{ stats[d.id]?.introduced ? 'Practise' : 'Start' }}
         </RouterLink>
+      </article>
+      <article v-if="m.id === 'rhythm'" class="card deck" data-deck="rhythm-tap">
+        <h3>Rhythm reading</h3>
+        <p class="muted">
+          Read a rhythm and tap it along with a metronome — scored to the millisecond.
+        </p>
+        <RouterLink class="btn btn-primary" :to="{ name: 'rhythm' }">Open</RouterLink>
       </article>
     </div>
   </section>

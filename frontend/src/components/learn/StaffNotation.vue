@@ -11,6 +11,8 @@ const props = defineProps<{
   clef: Clef
   notes: readonly string[]
   harmonic?: boolean
+  /** VexFlow key spec of a major key (e.g. 'Eb') to draw a key signature. */
+  keySignature?: string
   /** Accessible description; defaults to the note names. */
   label?: string
   width?: number
@@ -51,7 +53,13 @@ async function draw() {
     ctx.setFillStyle('currentColor')
     ctx.setStrokeStyle('currentColor')
     const stave = new Stave(8, 40, width - 16)
-    stave.addClef(props.clef).setContext(ctx).draw()
+    stave.addClef(props.clef)
+    if (props.keySignature) stave.addKeySignature(props.keySignature)
+    stave.setContext(ctx).draw()
+    if (props.notes.length === 0) {
+      failed.value = false
+      return
+    }
 
     const groups = props.harmonic ? [props.notes] : props.notes.map((n) => [n])
     const staveNotes = groups.map((g) => {
@@ -72,7 +80,10 @@ async function draw() {
 }
 
 onMounted(draw)
-watch(() => [props.clef, props.notes.join(','), props.harmonic, props.width], draw)
+watch(
+  () => [props.clef, props.notes.join(','), props.harmonic, props.width, props.keySignature],
+  draw,
+)
 onBeforeUnmount(() => {
   disposed = true
 })
@@ -83,7 +94,10 @@ onBeforeUnmount(() => {
     class="staff"
     role="img"
     :aria-label="
-      label ?? `${clef} clef: ${notes.map((n) => prettyNote(n)).join(harmonic ? ' and ' : ', ')}`
+      label ??
+      (notes.length
+        ? `${clef} clef: ${notes.map((n) => prettyNote(n)).join(harmonic ? ' and ' : ', ')}`
+        : `${clef} clef key signature`)
     "
   >
     <div ref="el" class="svg" />

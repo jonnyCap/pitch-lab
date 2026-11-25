@@ -6,12 +6,43 @@ import { playNotes } from '@/learn/sound'
 import RichText from '@/components/learn/RichText.vue'
 import StaffNotation from '@/components/learn/StaffNotation.vue'
 import PianoKeyboard from '@/components/learn/PianoKeyboard.vue'
+import CircleOfFifths from '@/components/learn/CircleOfFifths.vue'
+import RhythmNotation from '@/components/learn/RhythmNotation.vue'
+import { parseNote } from '@/learn/notes'
+import { noteOnsets, noteValue, type RhythmEvent } from '@/learn/rhythm'
+import { audio } from '@/audio/engine'
 
 const props = defineProps<{ id: string }>()
 const lesson = computed(() => lessonById(props.id))
 
 function pressKey(midi: number) {
   void playNotes([midi])
+}
+
+function playStaff(notes: readonly string[], harmonic?: boolean) {
+  const midis = notes.map((n) => parseNote(n).midi)
+  void playNotes(midis, harmonic)
+}
+
+function events(bars: string[][]): RhythmEvent[][] {
+  return bars.map((b) =>
+    b.map((id) => {
+      const v = noteValue(id)
+      return { code: v.code, beats: v.beats, rest: v.rest }
+    }),
+  )
+}
+
+/** Plays a rhythm at 80 bpm: a one-bar count-in, then the pattern as clicks. */
+function playRhythm(bars: string[][]) {
+  const beat = 60 / 80
+  const countIn = [0, 1, 2, 3].map((b) => ({
+    at: b * beat,
+    freq: b === 0 ? 2000 : 1500,
+    gain: 0.25,
+  }))
+  const notes = noteOnsets(events(bars)).map((t) => ({ at: (4 + t) * beat, freq: 900, gain: 0.6 }))
+  void audio.playClicks([...countIn, ...notes])
 }
 </script>
 
@@ -27,8 +58,27 @@ function pressKey(midi: number) {
           <li v-for="(it, j) in b.items" :key="j"><RichText :text="it" /></li>
         </ul>
         <figure v-else-if="b.type === 'staff'">
-          <StaffNotation :clef="b.clef" :notes="b.notes" :harmonic="b.harmonic" :width="260" />
-          <figcaption v-if="b.caption" class="muted">{{ b.caption }}</figcaption>
+          <StaffNotation
+            :clef="b.clef"
+            :notes="b.notes"
+            :harmonic="b.harmonic"
+            :key-signature="b.keySignature"
+            :width="b.notes.length > 4 ? 340 : 260"
+          />
+          <figcaption v-if="b.caption" class="muted">
+            {{ b.caption }}
+            <button v-if="b.play" class="btn small" @click="playStaff(b.notes, b.harmonic)">
+              ▶
+            </button>
+          </figcaption>
+        </figure>
+        <CircleOfFifths v-else-if="b.type === 'circle'" />
+        <figure v-else-if="b.type === 'rhythm'">
+          <RhythmNotation :bars="events(b.bars)" time-signature="4/4" />
+          <figcaption class="muted">
+            {{ b.caption }}
+            <button class="btn small" @click="playRhythm(b.bars)">▶ Listen</button>
+          </figcaption>
         </figure>
         <figure v-else-if="b.type === 'keyboard'">
           <PianoKeyboard
@@ -84,6 +134,10 @@ figure {
 figcaption {
   text-align: center;
   font-size: 0.85rem;
+}
+.btn.small {
+  padding: 0.15rem 0.6rem;
+  margin-left: 0.4rem;
 }
 .tip {
   border-left: 3px solid var(--series);

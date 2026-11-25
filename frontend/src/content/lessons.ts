@@ -9,7 +9,20 @@ export type LessonBlock =
   | { type: 'h'; text: string }
   | { type: 'p'; text: string }
   | { type: 'list'; items: string[] }
-  | { type: 'staff'; clef: Clef; notes: string[]; harmonic?: boolean; caption?: string }
+  | {
+      type: 'staff'
+      clef: Clef
+      notes: string[]
+      harmonic?: boolean
+      keySignature?: string
+      caption?: string
+      /** Show a play button for the written notes. */
+      play?: boolean
+    }
+  /** Interactive circle of fifths. */
+  | { type: 'circle' }
+  /** Rhythm example (bars of note-value ids) with a play button. */
+  | { type: 'rhythm'; bars: string[][]; caption?: string }
   | { type: 'keyboard'; lo: number; hi: number; mark?: number[]; caption?: string }
   /** Play button: notes as MIDI numbers, played one after another or together. */
   | { type: 'play'; label: string; midis: number[]; harmonic?: boolean }
@@ -18,7 +31,7 @@ export type LessonBlock =
 
 export interface Lesson {
   id: string
-  module: 'notes' | 'intervals'
+  module: 'notes' | 'intervals' | 'harmony' | 'rhythm'
   title: string
   summary: string
   /** Deck to practise afterwards. */
@@ -236,6 +249,365 @@ export const LESSONS: readonly Lesson[] = [
   },
 ]
 
+const HARMONY_LESSONS: Lesson[] = [
+  {
+    id: 'scales',
+    module: 'harmony',
+    title: 'Major and minor scales',
+    summary: 'Whole and half steps; natural, harmonic and melodic minor.',
+    deck: 'scales-sight',
+    blocks: [
+      {
+        type: 'p',
+        text: 'A **scale** is a ladder of seven notes, one per letter name, from a tonic up to its octave. The pattern of **whole steps** (W, 2 semitones) and **half steps** (H, 1 semitone) gives each scale its colour.',
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
+        caption: 'C major: W W H W W W H',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5'],
+        caption: 'A natural minor: W H W W H W W',
+        play: true,
+      },
+      {
+        type: 'p',
+        text: 'The **harmonic minor** raises the 7th degree, creating a strong pull back to the tonic (and a distinctive 1½-step gap between degrees 6 and 7).',
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G#5', 'A5'],
+        caption: 'A harmonic minor',
+        play: true,
+      },
+      {
+        type: 'p',
+        text: 'The **melodic minor** raises the 6th **and** 7th degrees going up. (In classical music it usually descends as natural minor.)',
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['A4', 'B4', 'C5', 'D5', 'E5', 'F#5', 'G#5', 'A5'],
+        caption: 'A melodic minor (ascending)',
+        play: true,
+      },
+      {
+        type: 'tip',
+        text: 'Major vs. minor: listen to the **3rd** degree — a major 3rd sounds bright, a minor 3rd darker.',
+      },
+    ],
+  },
+  {
+    id: 'modes',
+    module: 'harmony',
+    title: 'The modes',
+    summary: 'Seven scales from the same white keys.',
+    deck: 'scales-ear',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Play only the white keys, but start on a different note each time, and you get the seven **modes**. Each has its own characteristic note compared with major or natural minor.',
+      },
+      {
+        type: 'table',
+        head: ['Mode', 'White keys from', 'Character'],
+        rows: [
+          ['Ionian (= major)', 'C', 'bright, stable'],
+          ['Dorian', 'D', 'minor with a raised 6th — soft, "folky"'],
+          ['Phrygian', 'E', 'minor with a lowered 2nd — dark, Spanish'],
+          ['Lydian', 'F', 'major with a raised 4th — floating, dreamy'],
+          ['Mixolydian', 'G', 'major with a lowered 7th — bluesy, rock'],
+          ['Aeolian (= natural minor)', 'A', 'sad, serious'],
+          ['Locrian', 'B', 'lowered 2nd and 5th — unstable'],
+        ],
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5'],
+        caption: 'D Dorian',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5'],
+        caption: 'G Mixolydian',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5'],
+        caption: 'F Lydian',
+        play: true,
+      },
+      {
+        type: 'tip',
+        text: 'By ear, first decide major-ish or minor-ish (the 3rd), then listen for the one note that differs.',
+      },
+    ],
+  },
+  {
+    id: 'key-signatures',
+    module: 'harmony',
+    title: 'Key signatures and the circle of fifths',
+    summary: 'Order of sharps and flats, relative minors.',
+    deck: 'key-signatures',
+    blocks: [
+      {
+        type: 'p',
+        text: 'A **key signature** lists the sharps or flats of a key once, at the start of each line, instead of before every note.',
+      },
+      {
+        type: 'p',
+        text: 'Sharps always appear in the order **F C G D A E B**, flats in the reverse order **B E A D G C F**.',
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: [],
+        keySignature: 'C#',
+        caption: 'All seven sharps (C♯ major)',
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: [],
+        keySignature: 'Cb',
+        caption: 'All seven flats (C♭ major)',
+      },
+      {
+        type: 'list',
+        items: [
+          '**Sharp keys:** the major key is a semitone above the **last sharp** (last sharp C♯ → D major).',
+          '**Flat keys:** the major key is the **second-to-last flat** (B♭ E♭ A♭ → E♭ major). One flat is F major.',
+          '**Relative minor:** three semitones (a minor 3rd) below the major key, same signature (C major ↔ A minor).',
+        ],
+      },
+      {
+        type: 'p',
+        text: 'Going clockwise around the **circle of fifths** adds one sharp (or removes a flat) per step. Tap a key:',
+      },
+      { type: 'circle' },
+    ],
+  },
+  {
+    id: 'triads',
+    module: 'harmony',
+    title: 'Triads',
+    summary: 'Major, minor, diminished and augmented chords.',
+    deck: 'chords-sight',
+    blocks: [
+      {
+        type: 'p',
+        text: 'A **triad** stacks two 3rds on a **root**: root, 3rd and 5th. On the staff that is three notes on consecutive lines (or spaces).',
+      },
+      {
+        type: 'table',
+        head: ['Triad', 'Lower 3rd', 'Upper 3rd', 'From C'],
+        rows: [
+          ['major', 'M3', 'm3', 'C E G'],
+          ['minor', 'm3', 'M3', 'C E♭ G'],
+          ['diminished', 'm3', 'm3', 'C E♭ G♭'],
+          ['augmented', 'M3', 'M3', 'C E G♯'],
+        ],
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['C4', 'E4', 'G4'],
+        harmonic: true,
+        caption: 'C major',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['C4', 'Eb4', 'G4'],
+        harmonic: true,
+        caption: 'C minor',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['B4', 'D5', 'F5'],
+        harmonic: true,
+        caption: 'B diminished',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['C4', 'E4', 'G#4'],
+        harmonic: true,
+        caption: 'C augmented',
+        play: true,
+      },
+    ],
+  },
+  {
+    id: 'sevenths-inversions',
+    module: 'harmony',
+    title: 'Seventh chords and inversions',
+    summary: 'Adding a 7th; which note is in the bass.',
+    deck: 'inversions',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Stack one more 3rd and you get a **seventh chord**. The five common ones:',
+      },
+      {
+        type: 'table',
+        head: ['Chord', 'Symbol', 'From C'],
+        rows: [
+          ['dominant 7th', 'C7', 'C E G B♭'],
+          ['major 7th', 'Cmaj7', 'C E G B'],
+          ['minor 7th', 'Cm7', 'C E♭ G B♭'],
+          ['half-diminished 7th', 'Cø7', 'C E♭ G♭ B♭'],
+          ['diminished 7th', 'C°7', 'C E♭ G♭ B♭♭'],
+        ],
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['G4', 'B4', 'D5', 'F5'],
+        harmonic: true,
+        caption: 'G7 (dominant 7th)',
+        play: true,
+      },
+      {
+        type: 'p',
+        text: 'An **inversion** puts a chord tone other than the root in the bass: **1st inversion** = 3rd in the bass, **2nd inversion** = 5th in the bass, **3rd inversion** (seventh chords only) = 7th in the bass.',
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['C4', 'E4', 'G4'],
+        harmonic: true,
+        caption: 'C major, root position',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['E4', 'G4', 'C5'],
+        harmonic: true,
+        caption: '1st inversion (E in the bass)',
+        play: true,
+      },
+      {
+        type: 'staff',
+        clef: 'treble',
+        notes: ['G4', 'C5', 'E5'],
+        harmonic: true,
+        caption: '2nd inversion (G in the bass)',
+        play: true,
+      },
+      {
+        type: 'tip',
+        text: 'To find the root of an inverted triad, rearrange the notes into stacked 3rds; the bottom one is the root. A 4th between two notes means the upper one is the root.',
+      },
+    ],
+  },
+  {
+    id: 'hearing-chords',
+    module: 'harmony',
+    title: 'Hearing chord qualities',
+    summary: 'Bright, dark, tense and floating.',
+    deck: 'chords-ear',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Each chord is played together first, then note by note. Every question starts on a random root.',
+      },
+      { type: 'play', label: 'Major (bright, stable)', midis: [60, 64, 67], harmonic: true },
+      { type: 'play', label: 'Minor (darker)', midis: [60, 63, 67], harmonic: true },
+      { type: 'play', label: 'Diminished (tense, small)', midis: [60, 63, 66], harmonic: true },
+      {
+        type: 'play',
+        label: 'Augmented (unresolved, dreamy)',
+        midis: [60, 64, 68],
+        harmonic: true,
+      },
+      {
+        type: 'play',
+        label: 'Dominant 7th (wants to move on)',
+        midis: [60, 64, 67, 70],
+        harmonic: true,
+      },
+      { type: 'play', label: 'Major 7th (soft, jazzy)', midis: [60, 64, 67, 71], harmonic: true },
+      {
+        type: 'tip',
+        text: 'Listen to the top note in the arpeggio: a major 7th is one semitone below the octave, a minor 7th a whole tone below.',
+      },
+    ],
+  },
+]
+
+const RHYTHM_LESSONS: Lesson[] = [
+  {
+    id: 'note-values',
+    module: 'rhythm',
+    title: 'Note values and time signatures',
+    summary: 'How long notes and rests last; counting in 4/4.',
+    deck: 'note-values',
+    blocks: [
+      {
+        type: 'p',
+        text: 'The shape of a note tells you how long it lasts, counted in **beats**. In 4/4 time a **quarter note** gets one beat.',
+      },
+      {
+        type: 'table',
+        head: ['Note', 'Beats in 4/4'],
+        rows: [
+          ['whole', '4'],
+          ['half', '2'],
+          ['quarter', '1'],
+          ['eighth', '½'],
+          ['sixteenth', '¼'],
+        ],
+      },
+      {
+        type: 'rhythm',
+        bars: [['w'], ['h', 'h'], ['q', 'q', 'q', 'q'], ['8', '8', '8', '8', '8', '8', '8', '8']],
+        caption: 'Whole, half, quarter and eighth notes',
+      },
+      {
+        type: 'p',
+        text: 'A **dot** adds half the note’s value: a dotted half note lasts 3 beats, a dotted quarter 1½. **Rests** are silences of the same lengths.',
+      },
+      {
+        type: 'rhythm',
+        bars: [
+          ['hd', 'q'],
+          ['qd', '8', 'h'],
+          ['q', 'qr', 'q', 'qr'],
+          ['8r', '8', '8r', '8', 'hr'],
+        ],
+        caption: 'Dots and rests',
+      },
+      {
+        type: 'p',
+        text: 'The **time signature** says how many beats are in a bar (top number) and which note gets the beat (bottom: 4 = quarter). Common ones: **4/4**, **3/4** (waltz), **2/4** (march), and **6/8** (two groups of three eighths).',
+      },
+      {
+        type: 'tip',
+        text: 'Count out loud: "1 and 2 and 3 and 4 and" — eighth notes fall on the numbers and the "ands".',
+      },
+    ],
+  },
+]
+
+export const ALL_LESSONS: readonly Lesson[] = [...LESSONS, ...HARMONY_LESSONS, ...RHYTHM_LESSONS]
+
 export function lessonById(id: string): Lesson | undefined {
-  return LESSONS.find((l) => l.id === id)
+  return ALL_LESSONS.find((l) => l.id === id)
 }

@@ -100,3 +100,46 @@ export const pretest = (takenAt = Date.now()) => ({
   takenAt,
   metrics: { accuracy: 0.1, mad: 2.8, band: 'non-ap', untrained: { accuracy: 0.08 } },
 })
+
+/** Answers questions until the session summary appears. `wrongFirst` answers the first question wrongly. */
+export async function practise(page: Page, opts: { wrongFirst?: boolean } = {}) {
+  let answered = 0
+  for (;;) {
+    const state = await page.waitForFunction(() => {
+      if (document.querySelector('.summary')) return 'done'
+      const el = document.querySelector('section.practice') as HTMLElement | null
+      return el?.dataset.stage === 'question' && el.dataset.e2eAnswer
+        ? `${el.dataset.kind}|${el.dataset.e2eAnswer}`
+        : null
+    })
+    const value = (await state.jsonValue()) as string
+    if (value === 'done') break
+    const [kind, answer] = value.split('|') as [string, string]
+    const index = await page.locator('section.practice').getAttribute('data-index')
+    const wrong = opts.wrongFirst && answered === 0
+    if (kind === 'name-key' || kind === 'staff-key') {
+      const midi = wrong ? Number(answer) + 1 : Number(answer)
+      await page.locator(`.keyboard [data-midi="${midi}"]`).dispatchEvent('pointerdown')
+    } else {
+      const choices = page.locator('[data-choice]')
+      const target = wrong
+        ? choices
+            .filter({ hasNot: page.locator(`[data-choice="${answer}"]`) })
+            .and(page.locator(`:not([data-choice="${answer}"])`))
+            .first()
+        : page.locator(`[data-choice="${answer}"]`)
+      await target.dispatchEvent('pointerdown')
+    }
+    answered++
+    if (wrong) {
+      await expect(page.getByText('✗ Not quite')).toBeVisible()
+      await page.getByRole('button', { name: /Continue/ }).click()
+    } else {
+      await page.waitForFunction((i) => {
+        const el = document.querySelector('section.practice') as HTMLElement | null
+        return !el || el.dataset.index !== i || el.dataset.stage !== 'question'
+      }, index)
+    }
+  }
+  return answered
+}

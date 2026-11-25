@@ -43,3 +43,15 @@ describe('renderTone', () => {
     expect(amps.length * f0).toBeLessThan(SR / 2)
   })
 })
+
+import { renderClick } from './synth'
+
+describe('renderClick', () => {
+  it('starts immediately and decays', () => {
+    const c = renderClick(44100, 1500)
+    let peakAt = 0
+    for (let i = 0; i < c.length; i++) if (Math.abs(c[i]!) > Math.abs(c[peakAt]!)) peakAt = i
+    expect(peakAt).toBeLessThan(44100 * 0.003) // audible within 3 ms
+    expect(Math.abs(c[c.length - 1]!)).toBeLessThan(0.01)
+  })
+})

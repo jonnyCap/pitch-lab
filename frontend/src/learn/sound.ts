@@ -25,3 +25,21 @@ export async function playNotes(
     0.7,
   )
 }
+
+/** Ear-training playback: scale = quick ascending run; chord = block, then arpeggio. */
+export async function playStyled(
+  midis: readonly number[],
+  style: 'scale' | 'chord',
+): Promise<PlayedSound[]> {
+  if (style === 'scale') {
+    return audio.playTones(
+      learnTimbre(),
+      midis,
+      midis.map((_, i) => i * 0.32),
+      0.34,
+    )
+  }
+  const block = midis.map(() => 0)
+  const arp = midis.map((_, i) => 1.3 + i * 0.38)
+  return audio.playTones(learnTimbre(), [...midis, ...midis], [...block, ...arp], 1.0)
+}

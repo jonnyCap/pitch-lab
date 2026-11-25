@@ -1,47 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-
-/** Answers questions until the session summary appears. `wrongFirst` answers the first question wrongly. */
-async function practise(page: Page, opts: { wrongFirst?: boolean } = {}) {
-  let answered = 0
-  for (;;) {
-    const state = await page.waitForFunction(() => {
-      if (document.querySelector('.summary')) return 'done'
-      const el = document.querySelector('section.practice') as HTMLElement | null
-      return el?.dataset.stage === 'question' && el.dataset.e2eAnswer
-        ? `${el.dataset.kind}|${el.dataset.e2eAnswer}`
-        : null
-    })
-    const value = (await state.jsonValue()) as string
-    if (value === 'done') break
-    const [kind, answer] = value.split('|') as [string, string]
-    const index = await page.locator('section.practice').getAttribute('data-index')
-    const wrong = opts.wrongFirst && answered === 0
-    if (kind === 'name-key' || kind === 'staff-key') {
-      const midi = wrong ? Number(answer) + 1 : Number(answer)
-      await page.locator(`.keyboard [data-midi="${midi}"]`).dispatchEvent('pointerdown')
-    } else {
-      const choices = page.locator('[data-choice]')
-      const target = wrong
-        ? choices
-            .filter({ hasNot: page.locator(`[data-choice="${answer}"]`) })
-            .and(page.locator(`:not([data-choice="${answer}"])`))
-            .first()
-        : page.locator(`[data-choice="${answer}"]`)
-      await target.dispatchEvent('pointerdown')
-    }
-    answered++
-    if (wrong) {
-      await expect(page.getByText('✗ Not quite')).toBeVisible()
-      await page.getByRole('button', { name: /Continue/ }).click()
-    } else {
-      await page.waitForFunction((i) => {
-        const el = document.querySelector('section.practice') as HTMLElement | null
-        return !el || el.dataset.index !== i || el.dataset.stage !== 'question'
-      }, index)
-    }
-  }
-  return answered
-}
+import { practise } from './helpers'
 
 async function dbCounts(page: Page) {
   return page.evaluate(async () => {
@@ -117,6 +75,6 @@ test('learn hub lists modules, lessons and decks', async ({ page }) => {
   await page.goto('/learn')
   await expect(page.getByRole('heading', { name: 'Notes & staff' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Intervals', exact: true })).toBeVisible()
-  await expect(page.locator('[data-deck]')).toHaveCount(6)
+  await expect(page.locator('[data-deck]')).toHaveCount(14)
   await expect(page.getByRole('link', { name: /Hearing intervals/ })).toBeVisible()
 })

@@ -5,7 +5,7 @@
  */
 import { getTimbre, nearestSample, type TimbreId } from './instruments'
 import { pinkNoise, shepardGlissando, toAudioBuffer } from './interference'
-import { renderTone } from './synth'
+import { renderClick, renderTone } from './synth'
 import { contextTimeToPerfMs } from './timing'
 import { hzToMidi } from '@/music/pitch'
 
@@ -130,6 +130,31 @@ export class AudioEngine {
     const src = ctx.createBufferSource()
     src.buffer = buf
     return this.start(ctx, src, src, ctx.currentTime + LEAD_SEC)
+  }
+
+  /**
+   * Schedules clicks (metronome / rhythm) against a common start time. Each
+   * click's `at` is seconds after that start; returns each click's audible onset.
+   */
+  async playClicks(
+    clicks: readonly { at: number; freq: number; gain?: number }[],
+  ): Promise<PlayedSound[]> {
+    const ctx = await this.unlock()
+    // Create all buffers first, then fix the start time, so nothing is scheduled late.
+    const bufs = await Promise.all(
+      clicks.map((c) => {
+        const gain = c.gain ?? 0.5
+        return this.cached(`click:${c.freq}:${gain}:${ctx.sampleRate}`, async () =>
+          toAudioBuffer(ctx, renderClick(ctx.sampleRate, c.freq, 0.06, gain)),
+        )
+      }),
+    )
+    const t0 = ctx.currentTime + LEAD_SEC
+    return clicks.map((c, i) => {
+      const src = ctx.createBufferSource()
+      src.buffer = bufs[i]!
+      return this.start(ctx, src, src, t0 + c.at)
+    })
   }
 
   /** Descending Shepard glissando used before no-feedback and test blocks. */

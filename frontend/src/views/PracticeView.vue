@@ -14,8 +14,10 @@ import { LETTERS, parseNote, pitchNameChroma, prettyNote, prettyPitch } from '@/
 import { planSession, REQUEUE_WITHIN_MS, requeuePosition } from '@/learn/session'
 import { autoGrade, newCard, review, type StoredCard } from '@/learn/srs'
 import { loadCards, recentReviews, saveReview } from '@/learn/store'
-import { playNotes } from '@/learn/sound'
+import { playNotes, playStyled } from '@/learn/sound'
+import { noteValue } from '@/learn/rhythm'
 import StaffNotation from '@/components/learn/StaffNotation.vue'
+import RhythmNotation from '@/components/learn/RhythmNotation.vue'
 import PianoKeyboard, { type KeyHighlight } from '@/components/learn/PianoKeyboard.vue'
 
 const props = defineProps<{ deck: string }>()
@@ -64,15 +66,24 @@ async function ask() {
   question.value = deck.value.makeQuestion(item.value, { rng, introduced: introduced() })
   stage.value = 'question'
   shownAt = performance.now()
-  if (question.value.kind === 'ear-interval') await playEar()
+  const q = question.value
+  if (q.kind === 'ear-interval' || (q.kind === 'choice' && q.visual.type === 'audio')) {
+    await playEar()
+  }
 }
 
 async function playEar() {
   const q = question.value
-  if (q?.kind !== 'ear-interval') return
-  const sounds = await playNotes(q.ear.midis, q.ear.mode === 'harm')
-  // Response time counts from the last note's onset (the interval is complete then).
-  if (stage.value === 'question') shownAt = Math.max(shownAt, sounds.at(-1)!.onsetPerfMs)
+  if (q?.kind === 'ear-interval') {
+    const sounds = await playNotes(q.ear.midis, q.ear.mode === 'harm')
+    // Response time counts from the last note's onset (the interval is complete then).
+    if (stage.value === 'question') shownAt = Math.max(shownAt, sounds.at(-1)!.onsetPerfMs)
+  } else if (q?.kind === 'choice' && q.visual.type === 'audio') {
+    const sounds = await playStyled(q.visual.midis, q.visual.style)
+    // A chord is complete at its first (block) onset; a scale after its last note.
+    const ref = q.visual.style === 'chord' ? sounds[0]! : sounds[q.visual.midis.length - 1]!
+    if (stage.value === 'question') shownAt = Math.max(shownAt, ref.onsetPerfMs)
+  }
 }
 
 async function answer(a: Answer, timeStamp = performance.now()) {
@@ -127,6 +138,17 @@ async function playFeedback(q: Question) {
         q.sight.harmonic,
       )
       break
+    case 'choice': {
+      const v = q.visual
+      if (v.type === 'audio' && !lastCorrect.value) await playStyled(v.midis, v.style)
+      else if (v.type === 'staff' && v.notes.length) {
+        await playStyled(
+          v.notes.map((n) => parseNote(n).midi),
+          v.harmonic ? 'chord' : 'scale',
+        )
+      }
+      break
+    }
   }
 }
 
@@ -160,6 +182,10 @@ function onKey(e: KeyboardEvent) {
     const i = Number(e.key) - 1
     if (i >= 0 && i < q.choices.length) answer(q.choices[i]!, e.timeStamp)
     else if (e.code === 'KeyR' && q.kind === 'ear-interval') void playEar()
+  } else if (q.kind === 'choice') {
+    const i = Number(e.key) - 1
+    if (/^[1-9]$/.test(e.key) && i < q.choices.length) answer(q.choices[i]!.id, e.timeStamp)
+    else if (e.code === 'KeyR' && q.visual.type === 'audio') void playEar()
   }
 }
 window.addEventListener('keydown', onKey)
@@ -198,6 +224,12 @@ const correctText = computed(() => {
       return intervalById(q.ear.interval).long
     case 'sight-interval':
       return `${intervalById(q.sight.interval).long} (${prettyNote(q.sight.lower)}–${prettyNote(q.sight.upper)})`
+    case 'choice': {
+      const label = q.choices.find((c) => c.id === q.answer)?.label ?? q.answer
+      return q.visual.type === 'staff' && q.visual.notes.length
+        ? `${label} (${q.visual.notes.map((n) => prettyNote(n)).join(' ')})`
+        : label
+    }
   }
   return ''
 })
@@ -213,6 +245,10 @@ const e2eAnswer = computed(() => {
 })
 
 const modeLabel = { asc: 'rising', desc: 'falling', harm: 'together' } as const
+const noteEvent = (code: string) => {
+  const v = noteValue(code)
+  return { code: v.code, beats: v.beats, rest: v.rest }
+}
 const pct = computed(() =>
   answered.value ? Math.round((correctCount.value / answered.value) * 100) : 0,
 )
@@ -288,6 +324,21 @@ const pct = computed(() =>
       </p>
       <button class="btn replay" @click="playEar">▶ Play again <kbd>R</kbd></button>
     </template>
+    <template v-else-if="question.kind === 'choice'">
+      <p class="prompt">{{ question.prompt }}</p>
+      <StaffNotation
+        v-if="question.visual.type === 'staff'"
+        :clef="question.visual.clef"
+        :notes="question.visual.notes"
+        :harmonic="question.visual.harmonic"
+        :key-signature="question.visual.keySignature"
+        :width="question.visual.notes.length > 4 ? 330 : 240"
+      />
+      <button v-else-if="question.visual.type === 'audio'" class="btn replay" @click="playEar">
+        ▶ Play again <kbd>R</kbd>
+      </button>
+      <RhythmNotation v-else :bars="[[noteEvent(question.visual.code)]]" :width="120" />
+    </template>
     <template v-else-if="question.kind === 'sight-interval'">
       <p class="prompt">Which interval is written here?</p>
       <StaffNotation
@@ -323,6 +374,22 @@ const pct = computed(() =>
       :highlights="keyHighlights"
       @press="(m, ts) => answer(m, ts)"
     />
+    <div v-else-if="question.kind === 'choice'" class="choices wide">
+      <button
+        v-for="(c, i) in question.choices"
+        :key="c.id"
+        :data-choice="c.id"
+        class="btn choice"
+        :class="{
+          correct: stage === 'feedback' && c.id === question.answer,
+          wrong: stage === 'feedback' && !lastCorrect && c.id === lastAnswer,
+        }"
+        :disabled="stage !== 'question'"
+        @pointerdown.prevent="answer(c.id, $event.timeStamp)"
+      >
+        {{ c.label }} <kbd v-if="i < 9">{{ i + 1 }}</kbd>
+      </button>
+    </div>
     <div v-else class="choices">
       <button
         v-for="(c, i) in question.choices"
@@ -401,6 +468,9 @@ const pct = computed(() =>
 .choice {
   min-width: 3.5rem;
   touch-action: manipulation;
+}
+.wide .choice {
+  min-width: 9rem;
 }
 .letters .choice {
   min-width: 2.8rem;

@@ -78,6 +78,10 @@ describe('decks', () => {
           expect(isCorrect(q, a), `${deck.id} ${item}`).toBe(true)
           if (q.kind === 'ear-interval' || q.kind === 'sight-interval')
             expect(q.choices).toContain(a)
+          if (q.kind === 'choice') {
+            expect(q.choices.map((c) => c.id)).toContain(a)
+            expect(new Set(q.choices.map((c) => c.id)).size).toBe(q.choices.length)
+          }
           if (q.kind === 'staff-key' || q.kind === 'name-key') {
             if (q.kind === 'staff-key') {
               expect(a).toBeGreaterThanOrEqual(q.keyboard[0])

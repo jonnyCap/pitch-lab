@@ -1,5 +1,6 @@
 /** Persistence for fundamentals practice (Dexie + sync outbox). */
-import type { PitchLabDB } from '@/data/db'
+import { getStateDoc, putStateDoc, type PitchLabDB } from '@/data/db'
+import { normalizeRhythmProgress, type RhythmProgress } from './rhythm'
 import { uuid } from '@/lib/random'
 import type { ReviewRecord } from './session'
 import type { StoredCard } from './srs'
@@ -54,4 +55,38 @@ export async function deckStats(
 ): Promise<DeckStats> {
   const cards = await loadCards(db, deck)
   return { introduced: cards.length, total, due: cards.filter((c) => c.card.due <= now).length }
+}
+
+const RHYTHM_KEY = 'rhythm_progress'
+
+export async function loadRhythmProgress(db: PitchLabDB): Promise<RhythmProgress> {
+  return normalizeRhythmProgress(await getStateDoc<Partial<RhythmProgress>>(db, RHYTHM_KEY))
+}
+
+export async function saveRhythmProgress(db: PitchLabDB, p: RhythmProgress): Promise<void> {
+  // Plain copy: IndexedDB cannot clone Vue's reactive proxies.
+  await putStateDoc(db, RHYTHM_KEY, JSON.parse(JSON.stringify(p)) as RhythmProgress)
+}
+
+/** Logs a tap-along attempt in the review log (deck 'rhythm-tap'). */
+export async function logRhythmAttempt(
+  db: PitchLabDB,
+  level: number,
+  score: number,
+  meanAbsErrorMs: number | null,
+  passed: boolean,
+): Promise<void> {
+  const record: ReviewRecord = {
+    id: uuid(),
+    deck: 'rhythm-tap',
+    item: `L${level}`,
+    correct: passed,
+    rtMs: Math.round(meanAbsErrorMs ?? 0),
+    grade: Math.round(score * 100),
+    ts: Date.now(),
+  }
+  await db.transaction('rw', db.reviews, db.outbox, async () => {
+    await db.reviews.add(record)
+    await db.outbox.add({ kind: 'review', refId: record.id, createdAt: Date.now() })
+  })
 }

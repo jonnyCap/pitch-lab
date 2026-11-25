@@ -13,6 +13,7 @@ const router = createRouter({
       props: true,
     },
     { path: '/learn', name: 'learn', component: () => import('@/views/LearnView.vue') },
+    { path: '/learn/rhythm', name: 'rhythm', component: () => import('@/views/RhythmView.vue') },
     {
       path: '/learn/lesson/:id',
       name: 'lesson',
@@ -20,7 +21,7 @@ const router = createRouter({
       props: true,
     },
     {
-      path: '/learn/practice/:deck(keyboard|treble|bass|staff-keys|ear-intervals|sight-intervals)',
+      path: '/learn/practice/:deck(keyboard|treble|bass|staff-keys|ear-intervals|sight-intervals|key-signatures|scales-sight|scales-ear|chords-sight|inversions|chords-ear|note-values)',
       name: 'practice',
       component: () => import('@/views/PracticeView.vue'),
       props: true,

@@ -102,3 +102,26 @@ export function rms(samples: Float32Array, start = 0, end = samples.length): num
   for (let i = start; i < end; i++) s += samples[i]! * samples[i]!
   return Math.sqrt(s / Math.max(1, end - start))
 }
+
+/**
+ * Short percussive click (metronome / rhythm playback): a sine burst at `freq`
+ * with a 1 ms attack and exponential decay. Its onset is at sample 0, so the
+ * scheduled time is the audible beat.
+ */
+export function renderClick(
+  sampleRate: number,
+  freq: number,
+  durationSec = 0.06,
+  gain = 0.5,
+): Float32Array {
+  const n = Math.round(sampleRate * durationSec)
+  const out = new Float32Array(n)
+  const attack = Math.max(1, Math.round(0.001 * sampleRate))
+  const tau = durationSec / 5
+  for (let i = 0; i < n; i++) {
+    const t = i / sampleRate
+    const env = (i < attack ? i / attack : 1) * Math.exp(-t / tau)
+    out[i] = gain * env * Math.sin(2 * Math.PI * freq * t)
+  }
+  return out
+}
