@@ -7,6 +7,7 @@
  */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { RhythmEvent } from '@/learn/rhythm'
+import { loadVexFlow } from '@/lib/vexflow'
 
 const props = defineProps<{
   bars: readonly (readonly RhythmEvent[])[]
@@ -26,8 +27,7 @@ const ROW_H = 100
 async function draw() {
   const host = el.value
   if (!host) return
-  const VF = await import('vexflow/bravura')
-  await VF.default.loadFonts('Bravura', 'Academico')
+  const VF = await loadVexFlow()
   if (disposed || !el.value) return
   host.innerHTML = ''
   const { Renderer, Stave, StaveNote, Formatter, Dot } = VF

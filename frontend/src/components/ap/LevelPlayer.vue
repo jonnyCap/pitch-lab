@@ -334,7 +334,7 @@ onBeforeUnmount(() => {
 .points {
   margin-left: auto;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .btn.small {
   padding: 0.3rem 0.75rem;

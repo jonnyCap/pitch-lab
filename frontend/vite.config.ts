@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Pitch Lab',
         short_name: 'Pitch Lab',
         description: 'Learn music fundamentals and train absolute pitch.',
-        theme_color: '#0f766e',
-        background_color: '#0b1220',
+        theme_color: '#f4f3ee',
+        background_color: '#f4f3ee',
         display: 'standalone',
         start_url: '/',
         icons: [
@@ -27,8 +27,21 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Notation (VexFlow + Bravura) is ~600 kB and only needed in Learn: don't make every
+        // first visit download it; cache it on first use instead.
+        globIgnores: ['**/vexflow-*.js', '**/Bravura-*.woff2'],
         navigateFallbackDenylist: [/^\/samples\//],
         runtimeCaching: [
+          {
+            // Hashed file names = immutable.
+            urlPattern: ({ url }) => /\/assets\/(vexflow-|Bravura-)/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pitchlab-notation',
+              expiration: { maxEntries: 8 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             // Instrument samples are versioned & immutable: cache-first for offline training.
             urlPattern: ({ url }) => url.pathname.startsWith('/samples/'),

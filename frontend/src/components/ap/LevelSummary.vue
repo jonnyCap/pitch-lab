@@ -96,7 +96,7 @@ const message = computed(() => {
 .points {
   margin: 0 0 0.5rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .summary h2 {
   margin: 0;

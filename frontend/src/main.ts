@@ -5,6 +5,9 @@ import App from './App.vue'
 import router from './router'
 import 'vue-sonner/style.css'
 import './styles/base.css'
+import { initTheme } from './lib/theme'
+
+initTheme()
 
 const app = createApp(App)
 app.use(createPinia())

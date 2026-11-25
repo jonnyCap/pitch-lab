@@ -97,7 +97,7 @@ async function choose(major: string) {
 .major.on {
   border-color: var(--series);
   background: var(--series);
-  color: #fff;
+  color: var(--on-accent);
 }
 .minor {
   position: absolute;

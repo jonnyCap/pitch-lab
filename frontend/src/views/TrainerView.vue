@@ -229,7 +229,7 @@ function next() {
   padding: 0.75rem 1rem;
 }
 .stat .value {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
 }
 .stat small {
@@ -270,13 +270,17 @@ function next() {
 .steps li {
   width: 2rem;
   height: 2rem;
-  border-radius: 50%;
+  border-radius: 4px;
+  font-family: var(--mono);
+  transition:
+    background-color 0.3s,
+    border-color 0.3s;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--border);
+  border: 1px solid var(--border);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 .steps li.nofb {
@@ -285,11 +289,12 @@ function next() {
 .steps li.done {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-contrast);
+  color: var(--on-accent);
 }
 .steps li.current {
   border-color: var(--accent);
   color: var(--text);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .small {
   font-size: 0.85rem;

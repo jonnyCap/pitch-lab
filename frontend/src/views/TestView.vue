@@ -147,7 +147,7 @@ const delta = (now: number, before: number | undefined) => {
 .band {
   font-size: 1.2rem;
   font-weight: 800;
-  color: var(--accent);
+  color: var(--accent-ink);
   margin: 0.25rem 0;
 }
 .stats {

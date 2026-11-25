@@ -110,7 +110,7 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
   margin: 0.5rem 0 1rem;
 }
 .lesson-link {
-  color: var(--accent);
+  color: var(--accent-ink);
   text-decoration: none;
   font-weight: 600;
 }
@@ -132,7 +132,7 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 }
 .due {
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 progress {
   width: 100%;

@@ -377,7 +377,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   align-self: center;
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-ink);
   font: inherit;
   cursor: pointer;
 }
@@ -407,7 +407,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   background: var(--ok);
 }
 .marks .ok-ish {
-  background: #d97706;
+  background: var(--warn);
 }
 .marks .off,
 .marks .miss {

@@ -292,6 +292,7 @@ const pct = computed(() =>
 
   <section
     v-else-if="question"
+    :key="`card-${index}`"
     class="card practice"
     :data-stage="stage"
     :data-index="index"
@@ -435,6 +436,17 @@ const pct = computed(() =>
   flex-direction: column;
   gap: 0.75rem;
 }
+/* Each new card is dealt in with a slight 3D tilt. */
+.practice {
+  transform-origin: 50% 100%;
+  animation: deal 0.38s var(--ease-out);
+}
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateX(10deg) translateY(10px);
+  }
+}
 .topline {
   display: flex;
   justify-content: space-between;
@@ -443,7 +455,7 @@ const pct = computed(() =>
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .prompt {
   margin: 0;
@@ -478,12 +490,12 @@ const pct = computed(() =>
 .choice.correct {
   background: var(--ok);
   border-color: var(--ok);
-  color: #fff;
+  color: var(--on-status);
 }
 .choice.wrong {
   background: var(--bad);
   border-color: var(--bad);
-  color: #fff;
+  color: var(--on-status);
 }
 kbd {
   font-size: 0.65rem;

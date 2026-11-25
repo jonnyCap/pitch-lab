@@ -29,6 +29,6 @@ function close() {
   align-items: center;
   gap: 0.75rem;
   z-index: 20;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  box-shadow: var(--shadow);
 }
 </style>

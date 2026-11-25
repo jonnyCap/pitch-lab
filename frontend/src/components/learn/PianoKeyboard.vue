@@ -89,16 +89,29 @@ function press(midi: number, e: PointerEvent) {
   position: relative;
   display: flex;
   width: 100%;
-  height: 150px;
+  height: 160px;
   max-width: 640px;
   margin: 0 auto;
+  padding: 0 3px 3px;
   user-select: none;
   touch-action: manipulation;
+  perspective: 600px;
+  perspective-origin: 50% -40%;
+  background: var(--key-black);
+  border-radius: 4px 4px 8px 8px;
+  /* Key-slip felt. */
+  border-top: 4px solid color-mix(in srgb, var(--accent) 75%, #000);
+  box-shadow: var(--shadow);
 }
 button {
   font: inherit;
   cursor: pointer;
   padding: 0;
+  transform-origin: 50% 0;
+  transition:
+    transform 0.09s var(--ease-out),
+    box-shadow 0.09s var(--ease-out),
+    background-color 0.15s;
 }
 button:disabled {
   cursor: default;
@@ -106,42 +119,63 @@ button:disabled {
 .white {
   flex: 1 1 0;
   min-width: 0;
-  background: #fff;
-  border: 1px solid #94a3b8;
-  border-radius: 0 0 6px 6px;
+  margin: 0 1px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--key-white) 88%, #000) 0,
+    var(--key-white) 12%
+  );
+  border: 0;
+  border-radius: 0 0 5px 5px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 6px;
-  color: #475569;
+  padding-bottom: 10px;
+  color: #6b6a63;
+  box-shadow:
+    inset 0 -6px 0 color-mix(in srgb, var(--key-white) 82%, #000),
+    inset 0 0 0 1px rgb(0 0 0 / 0.08);
 }
 .black {
   position: absolute;
   top: 0;
   height: 60%;
-  background: #1e293b;
-  border: 1px solid #0f172a;
+  background: linear-gradient(to bottom, #2a2a2c, var(--key-black) 70%, #3a3a3d 92%, #222 100%);
+  border: 0;
   border-radius: 0 0 4px 4px;
   z-index: 1;
+  box-shadow:
+    inset 0 -5px 0 #454548,
+    inset 1px 0 0 rgb(255 255 255 / 0.06),
+    0 4px 6px rgb(0 0 0 / 0.35);
 }
+/* Pressed: the key pivots at the back and the front lip shrinks. */
 .white:not(:disabled):active {
-  background: #e2e8f0;
+  transform: rotateX(-5deg);
+  box-shadow:
+    inset 0 -2px 0 color-mix(in srgb, var(--key-white) 82%, #000),
+    inset 0 0 0 1px rgb(0 0 0 / 0.08),
+    inset 0 18px 18px -14px rgb(0 0 0 / 0.25);
 }
 .black:not(:disabled):active {
-  background: #334155;
+  transform: rotateX(-7deg);
+  box-shadow:
+    inset 0 -2px 0 #454548,
+    0 1px 2px rgb(0 0 0 / 0.35);
 }
 .correct {
   background: var(--ok) !important;
-  border-color: var(--ok) !important;
+  color: var(--on-status) !important;
 }
 .wrong {
   background: var(--bad) !important;
-  border-color: var(--bad) !important;
+  color: var(--on-status) !important;
 }
 .mark {
   background: var(--series) !important;
 }
 .c {
-  font-size: 0.65rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
 }
 </style>

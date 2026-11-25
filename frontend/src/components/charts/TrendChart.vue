@@ -201,7 +201,7 @@ svg {
   font-size: 0.8rem;
   pointer-events: none;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+  box-shadow: var(--shadow);
 }
 .tooltip span {
   color: var(--muted);

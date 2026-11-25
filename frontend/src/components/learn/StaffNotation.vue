@@ -6,6 +6,7 @@
  */
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { parseNote, prettyNote, type Clef } from '@/learn/notes'
+import { loadVexFlow } from '@/lib/vexflow'
 
 const props = defineProps<{
   clef: Clef
@@ -21,16 +22,6 @@ const props = defineProps<{
 const el = ref<HTMLDivElement | null>(null)
 const failed = ref(false)
 let disposed = false
-
-type VF = typeof import('vexflow/bravura')
-let vfPromise: Promise<VF> | null = null
-async function loadVexFlow(): Promise<VF> {
-  vfPromise ??= import('vexflow/bravura').then(async (m) => {
-    await m.default.loadFonts('Bravura', 'Academico')
-    return m
-  })
-  return vfPromise
-}
 
 function vexKey(name: string): { key: string; acc: string } {
   const n = parseNote(name)

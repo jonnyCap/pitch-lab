@@ -1,99 +1,355 @@
+/*
+ * "Swiss Lab" — calibrated-instrument look: warm paper / matte gunmetal,
+ * 1px structural lines, tabular figures, one International Orange accent.
+ * Theme: follows the OS unless <html data-theme="light|dark"> is set.
+ * Contrast of every text token checked (WCAG AA); --series validated with the
+ * dataviz palette checker against --surface in both modes.
+ */
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --text: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --accent: #0f766e;
-  --accent-contrast: #f0fdfa;
-  --ok: #15803d;
-  --bad: #b91c1c;
-  /* Chart tokens (validated with the dataviz palette checker against --surface) */
-  --series: #0d9488;
-  --grid: #e2e8f0;
-  --radius: 12px;
+  --bg: #f4f3ee;
+  --surface: #fbfaf7;
+  --raised: #ffffff;
+  --text: #161616;
+  --muted: #6b6a63;
+  --border: #d8d6ce;
+  --line: #e6e4dd;
+  --paper-grid: rgb(0 0 0 / 0.045);
+  --accent: #ff4f00;
+  --accent-ink: #c2410c;
+  --on-accent: #161616;
+  --accent-soft: rgb(255 79 0 / 0.1);
+  --ok: #12804a;
+  --bad: #c8102e;
+  --warn: #b45309;
+  --on-status: #ffffff;
+  --series: #e04a0a;
+  --grid: #e6e4dd;
+  --key-shadow: #cfccc2;
+  --key-white: #fdfcf9;
+  --key-black: #1b1b1c;
+  --shadow: 0 1px 0 rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.18);
+  --radius: 6px;
+  --mono:
+    ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas,
+    monospace;
+  --sans:
+    'Inter var', Inter, 'Helvetica Neue', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   color-scheme: light;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* Gunmetal dark mode — its own steps, not an inversion. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1220;
-    --surface: #111a2e;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --border: #1e293b;
-    --accent: #2dd4bf;
-    --accent-contrast: #042f2e;
-    --ok: #4ade80;
-    --bad: #f87171;
-    --series: #13a89a;
-    --grid: #1e293b;
+  :root:not([data-theme='light']) {
+    --bg: #141517;
+    --surface: #1c1d20;
+    --raised: #232427;
+    --text: #ecebe6;
+    --muted: #9a9992;
+    --border: #2f3135;
+    --line: #25272a;
+    --paper-grid: rgb(255 255 255 / 0.03);
+    --accent: #ff5a1f;
+    --accent-ink: #ff7a45;
+    --on-accent: #0b0c0d;
+    --accent-soft: rgb(255 90 31 / 0.14);
+    --ok: #3dd68c;
+    --bad: #ff5c70;
+    --warn: #f5a524;
+    --on-status: #0b0c0d;
+    --series: #f05a1e;
+    --grid: #2a2c30;
+    --key-shadow: #0c0d0e;
+    --key-white: #d9d7d0;
+    --key-black: #0e0f10;
+    --shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 12px 28px -14px rgb(0 0 0 / 0.7);
     color-scheme: dark;
   }
 }
+:root[data-theme='dark'] {
+  --bg: #141517;
+  --surface: #1c1d20;
+  --raised: #232427;
+  --text: #ecebe6;
+  --muted: #9a9992;
+  --border: #2f3135;
+  --line: #25272a;
+  --paper-grid: rgb(255 255 255 / 0.03);
+  --accent: #ff5a1f;
+  --accent-ink: #ff7a45;
+  --on-accent: #0b0c0d;
+  --accent-soft: rgb(255 90 31 / 0.14);
+  --ok: #3dd68c;
+  --bad: #ff5c70;
+  --warn: #f5a524;
+  --on-status: #0b0c0d;
+  --series: #f05a1e;
+  --grid: #2a2c30;
+  --key-shadow: #0c0d0e;
+  --key-white: #d9d7d0;
+  --key-black: #0e0f10;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 12px 28px -14px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
-a {
-  color: var(--accent);
+html {
+  background: var(--bg);
+  transition: background-color 0.3s;
+}
+input[type='range'],
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--accent);
 }
 body {
   margin: 0;
-  background: var(--bg);
+  min-height: 100dvh;
   color: var(--text);
+  transition: color 0.3s;
 }
+/* Faint lab-paper grid that fades out downward: two 1px gradients, no image. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--paper-grid) 1px, transparent 1px) 0 0 / 100% 32px,
+    linear-gradient(90deg, var(--paper-grid) 1px, transparent 1px) 0 0 / 32px 100%;
+  -webkit-mask: linear-gradient(to bottom, #000 0, transparent 75%);
+  mask: linear-gradient(to bottom, #000 0, transparent 75%);
+}
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-weight: 650;
+}
+h1 {
+  font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+  margin: 0.25rem 0 1rem;
+}
+h2 {
+  font-size: 1.25rem;
+}
+a {
+  color: var(--accent-ink);
+  text-underline-offset: 3px;
+}
+kbd,
+code {
+  font-family: var(--mono);
+}
+small {
+  font-variant-numeric: tabular-nums;
+}
+
 .container {
   max-width: 960px;
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: 1.5rem 1rem 5rem;
 }
+
+/* Panel: flat surface, 1px rule. */
 .card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.25rem;
 }
+.card > h2:first-child,
+.card > h3:first-child {
+  margin-top: 0;
+}
+
+/* Keycap buttons: a 2px "travel" lip that collapses when pressed. */
 .btn {
+  --lip: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1rem;
-  border-radius: 10px;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--raised);
   color: var(--text);
   font: inherit;
   font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.005em;
   cursor: pointer;
   text-decoration: none;
+  box-shadow: 0 var(--lip) 0 var(--key-shadow);
+  transform: translateY(0);
+  transition:
+    transform 0.08s var(--ease-out),
+    box-shadow 0.08s var(--ease-out),
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  touch-action: manipulation;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(var(--lip));
+  box-shadow: 0 0 0 var(--key-shadow);
 }
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-contrast);
+  color: var(--on-accent);
+  box-shadow: 0 var(--lip) 0 color-mix(in srgb, var(--accent) 55%, #000);
 }
+.btn-primary:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 92%, #fff);
+}
+.btn-primary:active:not(:disabled) {
+  box-shadow: 0 0 0 transparent;
+}
+.btn kbd {
+  font-size: 0.65rem;
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
 .muted {
   color: var(--muted);
 }
+/* Instrument-panel label: small mono caps. */
+.label,
+.stat > .muted {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stat .value {
+  font-family: var(--mono);
+  font-weight: 600 !important;
+  letter-spacing: -0.03em;
+}
+.crumbs {
+  font-family: var(--mono);
+  font-size: 0.75rem !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.crumbs a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.crumbs a:hover {
+  color: var(--accent-ink);
+}
+
 .grid {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
+
+/* Thin, flat meters instead of the native glossy bar. */
+progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+  color: var(--accent);
+}
+progress::-webkit-progress-bar {
+  background: var(--line);
+}
+progress::-webkit-progress-value {
+  background: var(--accent);
+  transition: width 0.4s var(--ease-out);
+}
+progress::-moz-progress-bar {
+  background: var(--accent);
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+th {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 :focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Route transition: a short rise, nothing more. */
+.page-enter-active {
+  transition:
+    opacity 0.22s var(--ease-out),
+    transform 0.28s var(--ease-out);
+}
+.page-leave-active {
+  transition: opacity 0.1s linear;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* vue-sonner toasts in theme colours. */
+[data-sonner-toaster] {
+  --normal-bg: var(--raised);
+  --normal-border: var(--border);
+  --normal-text: var(--text);
+  --border-radius: var(--radius);
+  font-family: var(--sans);
 }
