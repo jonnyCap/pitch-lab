@@ -208,10 +208,10 @@ function draw({ ctx, w, h, now, dt, t, reduced }: DrawArgs) {
   // Centre readout.
   ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = rgba(t.text)
-  ctx.font = `${Math.round(Math.min(w, h) * 0.17)}px ${t.serif}`
+  ctx.font = `${Math.round(Math.min(w, h) * 0.17)}px ${t.display}`
   const cy = view.cy + Math.min(w, h) * 0.05
   ctx.fillText(String(readout.value), w / 2, cy)
-  ctx.font = `italic ${Math.round(fs + 1)}px ${t.serif}`
+  ctx.font = `${Math.round(fs + 1)}px ${t.display}`
   ctx.fillStyle = rgba(t.muted)
   ctx.fillText(readout.value === 1 ? 'semitone' : 'semitones', w / 2, cy + fs * 1.5)
   ctx.textBaseline = 'middle'
@@ -333,7 +333,7 @@ canvas {
   padding: 0.1rem 0.4rem;
 }
 .name {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.2rem;
   margin-right: 0.4rem;
 }

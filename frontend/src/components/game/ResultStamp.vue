@@ -29,7 +29,7 @@ const style = computed(() => {
   border-radius: 3px;
   outline: 1px solid currentColor;
   outline-offset: 3px;
-  font: 400 1.6rem/1 var(--serif, Georgia, serif);
+  font: 400 1.6rem/1 var(--display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   transform: rotate(-6deg);

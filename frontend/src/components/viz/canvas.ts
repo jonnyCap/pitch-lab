@@ -14,7 +14,7 @@ export interface Tokens {
   accent: RGBA
   surface: RGBA
   bg: RGBA
-  serif: string
+  display: string
   sans: string
   mono: string
 }
@@ -74,7 +74,7 @@ export function readTokens(): Tokens {
     accent: resolveToken('--accent'),
     surface: resolveToken('--surface'),
     bg: resolveToken('--bg'),
-    serif: font('--serif', 'Georgia, serif'),
+    display: font('--display', 'system-ui, sans-serif'),
     sans: font('--sans', 'system-ui, sans-serif'),
     mono: font('--mono', 'monospace'),
   }

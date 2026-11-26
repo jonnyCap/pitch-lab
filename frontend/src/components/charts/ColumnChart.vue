@@ -161,8 +161,7 @@ const fmt = (v: number) => `${Math.round(v)} ${props.unit}`
   margin: 0;
 }
 figcaption {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--display);
   font-size: 1.1rem;
   color: var(--muted);
   margin-bottom: 0.4rem;

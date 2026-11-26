@@ -68,13 +68,12 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 .num {
-  font: 400 clamp(5rem, 22vw, 9rem) / 1 var(--serif, Georgia, serif);
-  letter-spacing: -0.03em;
+  font: 300 clamp(4rem, 16vw, 7rem) / 1 var(--display);
+  letter-spacing: -0.02em;
   color: var(--text, #0b0b0c);
   animation: cd-step 0.65s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 .num.go {
-  font-style: italic;
   color: var(--accent-ink, #1e40ff);
 }
 @keyframes cd-step {

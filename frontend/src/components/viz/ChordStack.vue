@@ -166,7 +166,7 @@ function draw({ ctx, w, h, now, dt, t, reduced }: DrawArgs) {
     ctx.fillStyle = isRoot ? rgba(t.accent) : rgba(t.text)
     ctx.fillText(noteLabel(soundOf(i)), p.x - 34 * p.s - fs * 0.4, p.y)
     ctx.textAlign = 'right'
-    ctx.font = `italic ${fs + 2}px ${t.serif}`
+    ctx.font = `${fs + 2}px ${t.display}`
     ctx.fillStyle = isRoot ? rgba(t.accent) : rgba(t.muted)
     ctx.fillText(blocks.value[i]!.degree, p.x + 62 * p.s, p.y)
   }
@@ -187,7 +187,7 @@ function draw({ ctx, w, h, now, dt, t, reduced }: DrawArgs) {
       ctx.lineTo(a.x + 12, b.y)
       ctx.lineTo(b.x + 6, b.y)
       ctx.stroke()
-      ctx.font = `italic ${fs + 3}px ${t.serif}`
+      ctx.font = `${fs + 3}px ${t.display}`
       ctx.fillStyle = rgba(t.text)
       ctx.fillText(intervalShort(gaps.value[k]!), a.x + 18, (a.y + b.y) / 2)
     }
@@ -265,7 +265,7 @@ canvas {
   gap: 0.75rem;
 }
 .name {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.2rem;
 }
 .btn.small {

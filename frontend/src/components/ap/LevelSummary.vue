@@ -170,7 +170,7 @@ onMounted(() => {
 }
 .summary h2 {
   margin: 0;
-  font-size: 3.2rem;
+  font-size: 2.6rem;
   line-height: 1;
 }
 .sub {
@@ -194,8 +194,8 @@ onMounted(() => {
 }
 .points {
   margin: 0;
-  font-family: var(--serif);
-  font-size: 2rem;
+  font-family: var(--display);
+  font-size: 1.6rem;
   line-height: 1;
   color: var(--accent-ink);
 }
@@ -231,7 +231,7 @@ onMounted(() => {
   padding: 0.2rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.1rem;
 }
 .conf small {

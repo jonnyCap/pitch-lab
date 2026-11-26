@@ -1,3 +1,12 @@
+/* Inter (SIL OFL), variable weight, latin subset only — self-hosted. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../assets/fonts/Inter-latin-var.woff2') format('woff2');
+}
+
 /*
  * "Sheet Music, Modernized" — editorial light: alabaster paper, jet-black ink hairlines,
  * one electric cobalt accent, Instrument Serif display type. Dark mode is its own palette
@@ -28,19 +37,20 @@
   --key-shadow: #d6d6d2;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -16px rgb(0 0 0 / 0.12);
   --radius: 4px;
-  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --page-width: 1160px;
+  --gap-block: 2.5rem;
   --mono:
     ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas,
     monospace;
-  --sans:
-    'Inter var', Inter, 'Helvetica Neue', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Display type (headings, big numbers) uses the same family as the body. */
+  --display: var(--sans);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   color-scheme: light;
   font-family: var(--sans);
   font-size: 16.5px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.55;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -127,26 +137,26 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--serif);
-  font-weight: 400;
+  font-family: var(--display);
+  font-weight: 600;
   letter-spacing: -0.015em;
-  line-height: 1.08;
+  line-height: 1.2;
 }
 h1 {
-  font-size: clamp(2.4rem, 6vw, 3.6rem);
-  letter-spacing: -0.025em;
-  margin: 0.25rem 0 1rem;
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  letter-spacing: -0.02em;
+  margin: 0.25rem 0 1.75rem;
 }
 h2 {
-  font-size: 1.75rem;
+  font-size: 1.4rem;
+  margin: 0 0 0.75rem;
 }
 h3 {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
 }
-h1 em,
-h2 em,
-h3 em {
-  font-style: italic;
+p {
+  margin: 0 0 1em;
 }
 a {
   color: var(--accent-ink);
@@ -157,14 +167,23 @@ kbd,
 code {
   font-family: var(--mono);
 }
-small {
-  font-variant-numeric: tabular-nums;
-}
 
 .container {
-  max-width: 920px;
+  max-width: var(--page-width);
   margin: 0 auto;
-  padding: 2rem 1.25rem 6rem;
+  padding: 3rem 2rem 7rem;
+}
+/* Consistent breathing room between the top-level blocks of every page. */
+.container > div > * + * {
+  margin-top: var(--gap-block);
+}
+.container > div > h1 + * {
+  margin-top: 0;
+}
+@media (max-width: 640px) {
+  .container {
+    padding: 2rem 1.25rem 5rem;
+  }
 }
 
 /* Panel: white sheet, 1px hairline, no shadow. */
@@ -173,7 +192,12 @@ small {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 2rem;
+}
+@media (max-width: 640px) {
+  .card {
+    padding: 1.35rem;
+  }
 }
 .card > h2:first-child,
 .card > h3:first-child {
@@ -249,13 +273,14 @@ small {
 /* Small sans label, small-caps. */
 .label,
 .stat > .muted {
-  font-size: 0.8rem;
-  font-variant-caps: all-small-caps;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted);
 }
 .stat .value {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400 !important;
   letter-spacing: -0.01em;
 }
@@ -274,26 +299,26 @@ small {
 /* Magazine section: thin rule above, optional numbered kicker. */
 .section {
   border-top: 1px solid var(--text);
-  padding-top: 1rem;
-  margin-top: 3rem;
+  padding-top: 1.5rem;
+  margin-top: 4rem;
 }
 .kicker {
-  font-size: 0.8rem;
-  font-variant-caps: all-small-caps;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  font-weight: 500;
   letter-spacing: 0.08em;
   color: var(--muted);
 }
 .fig-caption {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--display);
   font-size: 0.95rem;
   color: var(--muted);
 }
 
 .grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 /* Thin, flat meters. */
@@ -326,13 +351,15 @@ table {
 th {
   font-size: 0.8rem;
   font-weight: 500;
-  font-variant-caps: all-small-caps;
+  text-transform: uppercase;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted);
 }
 td,
 th {
   border-bottom: 1px solid var(--line);
+  padding: 0.7rem 1rem 0.7rem 0;
 }
 
 /* Disclosure */
@@ -401,4 +428,21 @@ details > summary:hover {
   --normal-text: var(--text);
   --border-radius: var(--radius);
   font-family: var(--sans);
+}
+
+/* Emphasis is colour, not slant (Inter is loaded without italics). */
+em {
+  font-style: normal;
+}
+
+/* Fixed-width figures only where numbers change in place (Inter's tnum also widens
+   hyphens and colons, so it is not applied to running text). */
+table,
+.mono,
+.value,
+.stat,
+.num,
+progress,
+[data-final] {
+  font-variant-numeric: tabular-nums;
 }

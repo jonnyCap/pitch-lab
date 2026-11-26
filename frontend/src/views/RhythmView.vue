@@ -427,7 +427,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   gap: 1rem;
 }
 .titlebar h1 {
-  font-size: clamp(2.2rem, 7vw, 3rem);
+  font-size: clamp(2rem, 4vw, 2.6rem);
 }
 .controls {
   display: flex;
@@ -438,7 +438,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   margin-bottom: 1rem;
 }
 .level {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
   font-size: 1.6rem;
 }
@@ -495,7 +495,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   margin: 0;
 }
 .calibrate h2 {
-  font-size: 2.4rem;
+  font-size: 1.6rem;
 }
 .cal-progress {
   display: flex;
@@ -552,7 +552,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
 }
 .result h2 {
   margin: 0;
-  font-size: clamp(3.6rem, 14vw, 5rem);
+  font-size: clamp(2.8rem, 9vw, 3.8rem);
   line-height: 1;
 }
 .levelup {
@@ -611,8 +611,8 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   }
 }
 .beat {
-  font-family: var(--serif);
-  font-size: 5.5rem;
+  font-family: var(--display);
+  font-size: 4.2rem;
   line-height: 1;
   min-height: 5.5rem;
   animation: pop 0.25s var(--ease-out);

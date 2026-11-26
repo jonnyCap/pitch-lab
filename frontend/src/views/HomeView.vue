@@ -82,9 +82,9 @@ const tiles = [
   margin: 0 0 1.25rem;
 }
 h1 {
-  font-size: clamp(2.9rem, 6.2vw, 4.4rem);
+  font-size: clamp(2.3rem, 4.4vw, 3.3rem);
   line-height: 0.98;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   margin: 0 0 1.5rem;
 }
 h1 em {
@@ -106,8 +106,7 @@ h1 em {
   justify-self: center;
 }
 .viz :deep(figcaption) {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--display);
   font-size: 0.95rem;
   font-variant-caps: normal;
   letter-spacing: 0;
@@ -132,9 +131,8 @@ h1 em {
   padding-left: 0.5rem;
 }
 .no {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.1rem;
-  font-style: italic;
   color: var(--muted);
 }
 .body {
@@ -143,7 +141,7 @@ h1 em {
 }
 .entry h2 {
   margin: 0;
-  font-size: 2.1rem;
+  font-size: 1.5rem;
 }
 .entry:hover h2 {
   color: var(--accent-ink);
@@ -154,7 +152,9 @@ h1 em {
 }
 .spec {
   font-size: 0.8rem;
-  font-variant-caps: all-small-caps;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted);
   margin-top: 0.35rem;
@@ -179,8 +179,8 @@ blockquote {
   margin: 0.6rem 0 0;
   padding-left: 1.25rem;
   border-left: 2px solid var(--accent);
-  font-family: var(--serif);
-  font-size: clamp(1.5rem, 3.6vw, 2rem);
+  font-family: var(--display);
+  font-size: clamp(1.2rem, 2.4vw, 1.45rem);
   line-height: 1.2;
   letter-spacing: -0.01em;
 }

@@ -124,8 +124,7 @@ svg {
   color: var(--bad);
 }
 .cap {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--display);
   font-size: 11px;
   fill: var(--muted);
 }

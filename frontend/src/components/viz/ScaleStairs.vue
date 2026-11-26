@@ -162,7 +162,7 @@ function draw({ ctx, w, h, now, dt, t, reduced }: DrawArgs) {
     const mx = (p0.x + p1.x) / 2
     const my = Math.min(p0.y, p1.y) - 5 - fs * 0.7
     const text = stepLetter(s)
-    ctx.font = `italic ${fs + 2}px ${t.serif}`
+    ctx.font = `${fs + 2}px ${t.display}`
     const tw = ctx.measureText(text).width + 10
     ctx.fillStyle = rgba(t.surface)
     ctx.strokeStyle = s === 1 ? rgba(t.accent) : rgba(t.border)
@@ -291,7 +291,7 @@ canvas {
   margin-top: 0.25rem;
 }
 .name {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.2rem;
 }
 .btn.small {

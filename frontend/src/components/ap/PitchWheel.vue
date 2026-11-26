@@ -344,7 +344,7 @@ const ticks = Array.from({ length: 60 }, (_, i) => {
   border-color: var(--bad) !important;
 }
 .name {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
   font-size: clamp(1.15rem, 4.6vw, 1.5rem);
   letter-spacing: -0.01em;

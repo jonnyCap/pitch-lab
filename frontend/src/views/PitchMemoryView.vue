@@ -360,7 +360,7 @@ async function continueOn() {
   margin-bottom: 0.4rem;
 }
 .rules strong {
-  font: 400 1.35rem/1.1 var(--serif);
+  font: 400 1.35rem/1.1 var(--display);
 }
 .rules .muted {
   font-size: 0.85rem;
@@ -381,8 +381,8 @@ async function continueOn() {
   font-size: 0.85rem;
 }
 .big {
-  font-family: var(--serif);
-  font-size: 3rem;
+  font-family: var(--display);
+  font-size: 2.4rem;
   font-weight: 400;
   margin: 0;
 }
@@ -442,7 +442,7 @@ async function continueOn() {
 }
 .readout .mono {
   font-family: var(--mono);
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   letter-spacing: -0.02em;
 }
 .readout small {
@@ -529,13 +529,13 @@ async function continueOn() {
   margin-top: auto;
 }
 .result h2 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
   font-size: 1.8rem;
   margin: 0;
 }
 .bignum {
-  font-size: 4.2rem;
+  font-size: 3.2rem;
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--accent-ink);
@@ -564,7 +564,7 @@ async function continueOn() {
   fill: var(--muted);
 }
 .scatter .tgt {
-  font: italic 8px var(--serif);
+  font: 8px var(--display);
   fill: var(--accent-ink);
 }
 .dot {

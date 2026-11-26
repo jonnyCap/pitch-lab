@@ -71,7 +71,7 @@ const themeLabel = computed(
   -webkit-backdrop-filter: blur(10px);
 }
 .bar {
-  max-width: 920px;
+  max-width: var(--page-width);
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -79,7 +79,7 @@ const themeLabel = computed(
   padding: 0.7rem 1.25rem;
 }
 .brand {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.65rem;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -88,7 +88,6 @@ const themeLabel = computed(
   margin-right: auto;
 }
 .brand em {
-  font-style: italic;
 }
 .dot {
   display: inline-block;

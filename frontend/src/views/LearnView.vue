@@ -128,16 +128,16 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 
 <style scoped>
 .masthead h1 {
-  font-size: clamp(3rem, 9vw, 4.5rem);
+  font-size: clamp(2.1rem, 4.5vw, 2.9rem);
   margin: 0;
 }
 .dek {
-  font-family: var(--serif);
-  font-size: 1.3rem;
+  font-family: var(--display);
+  font-size: 1.15rem;
   line-height: 1.3;
   color: var(--muted);
-  margin: 0.25rem 0 1rem;
-  max-width: 36rem;
+  margin: 0.5rem 0 2rem;
+  max-width: 46rem;
 }
 .hero {
   display: flex;
@@ -145,8 +145,8 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 1.5rem;
-  padding: 1.5rem 1.75rem;
+  margin-top: 2rem;
+  padding: 2rem 2.25rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
@@ -164,11 +164,11 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 }
 .hero-title {
   margin: 0.15rem 0;
-  font-size: 2.2rem;
+  font-size: 1.4rem;
 }
 .module h2 {
-  margin: 0;
-  font-size: clamp(2rem, 6vw, 2.8rem);
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.5rem, 3.2vw, 1.9rem);
 }
 .module .kicker {
   margin: 0 0 0.25rem;
@@ -177,7 +177,7 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 .lessons {
   list-style: none;
   padding: 0;
-  margin: 0.5rem 0 1.5rem;
+  margin: 1.25rem 0 2.25rem;
   border-top: 1px solid var(--line);
 }
 .lessons li {
@@ -187,7 +187,7 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
   display: flex;
   align-items: baseline;
   gap: 1rem;
-  padding: 0.7rem 0;
+  padding: 0.9rem 0;
   color: var(--text);
   text-decoration: none;
 }
@@ -198,8 +198,8 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 }
 .ltitle {
   flex: 1;
-  font-family: var(--serif);
-  font-size: 1.35rem;
+  font-family: var(--display);
+  font-size: 1.1rem;
   line-height: 1.2;
 }
 .arrow {
@@ -221,8 +221,8 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 .deck {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 1.25rem;
+  gap: 0.85rem;
+  padding: 1.75rem;
   transition:
     transform 0.2s var(--ease-out),
     border-color 0.2s;
@@ -239,14 +239,15 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 }
 .deck h3 {
   margin: 0;
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: 1.5rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.2rem;
 }
 .desc {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   flex: 1;
+  line-height: 1.55;
 }
 .due {
   font-size: 0.75rem;
@@ -276,7 +277,7 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 .meta {
   display: block;
   margin-top: 0.3rem;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 .deck .btn {
@@ -285,7 +286,7 @@ const lessonsOf = (m: ModuleId) => ALL_LESSONS.filter((l) => l.module === m)
 .tip {
   border-left: 2px solid var(--accent);
   padding: 0.25rem 0 0.25rem 1rem;
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.2rem;
   line-height: 1.3;
   margin: 0.5rem 0;

@@ -180,7 +180,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .dek {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.3rem;
   color: var(--muted);
   margin: 0.25rem 0 1.5rem;
@@ -202,7 +202,9 @@ onBeforeUnmount(() => {
   font-size: 1.8rem;
 }
 .kicker {
-  font-variant-caps: all-small-caps;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.08em;
 }
 .unlock {
@@ -220,8 +222,8 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 .name {
-  font-family: var(--serif);
-  font-size: 4.2rem;
+  font-family: var(--display);
+  font-size: 3.2rem;
   line-height: 1;
   animation: pop 0.3s var(--ease-out);
 }
@@ -286,8 +288,8 @@ onBeforeUnmount(() => {
   border: 1px solid var(--text);
   background: var(--surface);
   color: var(--text);
-  font-family: var(--serif);
-  font-size: 2rem;
+  font-family: var(--display);
+  font-size: 1.6rem;
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
@@ -341,8 +343,8 @@ onBeforeUnmount(() => {
 }
 .mean {
   align-self: center;
-  font-family: var(--serif);
-  font-size: 3rem;
+  font-family: var(--display);
+  font-size: 2.4rem;
   line-height: 1;
 }
 .mean .muted {

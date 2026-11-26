@@ -66,7 +66,7 @@ watch(
 }
 .n {
   display: inline-block;
-  font: 400 1.6rem/1 var(--serif, Georgia, serif);
+  font: 400 1.6rem/1 var(--display);
   color: var(--text, #0b0b0c);
   letter-spacing: -0.01em;
   transform-origin: left center;
@@ -81,7 +81,9 @@ watch(
 }
 .lbl {
   font-size: 0.72rem;
-  font-variant-caps: all-small-caps;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted, #5f6168);
 }

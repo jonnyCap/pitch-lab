@@ -91,7 +91,7 @@ export function popText(anchor: Anchor, text: string, tone: Tone = 'accent'): vo
   const { x, y } = anchorPoint(anchor)
   const el = document.createElement('span')
   el.textContent = text
-  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;translate:-50% -50%;font:400 1.75rem/1 var(--serif, Georgia, serif);letter-spacing:-0.01em;white-space:nowrap;color:var(${TONE_VAR[tone]});will-change:transform,opacity`
+  el.style.cssText = `position:absolute;left:${x}px;top:${y}px;translate:-50% -50%;font:400 1.75rem/1 var(--display);letter-spacing:-0.01em;white-space:nowrap;color:var(${TONE_VAR[tone]});will-change:transform,opacity`
   getLayer().appendChild(el)
   const d = dur(700)
   const done = () => el.remove()

@@ -325,7 +325,7 @@ function next() {
   margin-top: 0.4rem;
 }
 h2 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
 }
 h2 em {
@@ -340,7 +340,7 @@ h2 em {
   padding: 1.5rem 2rem;
 }
 .ring-num {
-  font: 400 2.8rem/1 var(--serif);
+  font: 300 2.3rem/1.05 var(--display);
   letter-spacing: -0.02em;
 }
 .ring-sub {
@@ -360,7 +360,7 @@ h2 em {
   flex-direction: column;
 }
 .big {
-  font: 400 clamp(2.6rem, 9vw, 3.6rem) / 1 var(--serif);
+  font: 300 clamp(2.2rem, 6vw, 2.9rem) / 1.05 var(--display);
   letter-spacing: -0.02em;
 }
 .num .muted {
@@ -416,7 +416,7 @@ h2 em {
 }
 .mastered h2 {
   margin: 0;
-  font-size: 2.4rem;
+  font-size: 1.75rem;
 }
 .tier {
   margin-bottom: 1rem;
@@ -506,7 +506,7 @@ h2 em {
   gap: 0.25rem 1rem;
 }
 .tier-title {
-  font: 400 1.5rem/1.1 var(--serif);
+  font: 400 1.5rem/1.1 var(--display);
 }
 .steps {
   display: flex;
@@ -550,7 +550,7 @@ h2 em {
   margin: 0;
 }
 .baseline h2 {
-  font-size: 2.2rem;
+  font-size: 1.6rem;
   margin-top: 0;
 }
 </style>

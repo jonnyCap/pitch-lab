@@ -378,7 +378,7 @@ watch(
   <p v-if="stage === 'loading'" class="muted">Loading…</p>
 
   <section v-else-if="stage === 'empty'" class="card empty">
-    <p class="serif">Nothing to practise right now.</p>
+    <p class="lead">Nothing to practise right now.</p>
     <p class="muted">Everything is learned and scheduled for later.</p>
     <RouterLink class="btn" to="/learn">Back to Learn</RouterLink>
   </section>
@@ -577,7 +577,7 @@ watch(
   gap: 1rem;
 }
 .titlebar h1 {
-  font-size: clamp(2rem, 6vw, 2.8rem);
+  font-size: clamp(2rem, 4vw, 2.6rem);
 }
 .hud {
   margin: 0.5rem 0 1rem;
@@ -600,8 +600,8 @@ watch(
   text-align: center;
   align-items: center;
 }
-.serif {
-  font-family: var(--serif);
+.lead {
+  font-family: var(--display);
   font-size: 1.8rem;
   margin: 0;
 }
@@ -630,14 +630,16 @@ watch(
 }
 .new {
   font-size: 0.8rem;
-  font-variant-caps: all-small-caps;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--accent-ink);
 }
 .prompt {
   margin: 0;
-  font-family: var(--serif);
-  font-size: clamp(1.8rem, 5.5vw, 2.4rem);
+  font-family: var(--display);
+  font-size: clamp(1.35rem, 3.5vw, 1.7rem);
   line-height: 1.1;
   letter-spacing: -0.01em;
   text-align: center;
@@ -646,8 +648,8 @@ watch(
   font-size: 0.7em;
 }
 .big {
-  font-family: var(--serif);
-  font-size: clamp(4.5rem, 16vw, 6rem);
+  font-family: var(--display);
+  font-size: clamp(3.4rem, 11vw, 4.4rem);
   font-weight: 400;
   line-height: 1;
   text-align: center;
@@ -680,7 +682,7 @@ watch(
 }
 .letters .choice {
   min-width: 3rem;
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.4rem;
 }
 .choice.correct {
@@ -733,7 +735,7 @@ kbd {
 }
 .summary h2 {
   margin: 0.5rem 0 0;
-  font-size: clamp(3.6rem, 14vw, 5.5rem);
+  font-size: clamp(2.8rem, 9vw, 4rem);
   line-height: 1;
 }
 .summary h2 small {

@@ -1,7 +1,7 @@
 <!--
   Ring gauge that draws in. <RingGauge :value="0.82" label="exactly right" :reference="0.08" />
   value 0..1; `reference` draws a tick (e.g. chance level). The default slot
-  replaces the centre text (serif percentage + small label).
+  replaces the centre text (large percentage + small label).
 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
@@ -118,7 +118,7 @@ svg {
   line-height: 1;
 }
 .num {
-  font: 400 calc(v-bind(size) * 0.3px) / 1 var(--serif, Georgia, serif);
+  font: 400 calc(v-bind(size) * 0.3px) / 1 var(--display);
   letter-spacing: -0.02em;
   color: var(--text, #0b0b0c);
 }

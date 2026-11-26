@@ -183,7 +183,7 @@ function playRhythm(bars: string[][]) {
   flex-direction: column;
   gap: 0.6rem;
   line-height: 1.7;
-  max-width: 42rem;
+  max-width: 46rem;
   margin: 0 auto;
 }
 .head {
@@ -198,16 +198,15 @@ function playRhythm(bars: string[][]) {
   color: inherit;
 }
 h1 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(2.4rem, 7vw, 3.8rem);
+  font-size: clamp(2.1rem, 4.5vw, 2.9rem);
   line-height: 1.02;
   letter-spacing: -0.02em;
   margin: 0;
 }
 .dek {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--display);
   font-size: 1.35rem;
   line-height: 1.3;
   color: var(--muted);
@@ -217,7 +216,7 @@ h1 {
   font-size: 1.15rem;
 }
 .sec {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
   font-size: 1.8rem;
   border-top: 1px solid var(--line);
@@ -250,14 +249,13 @@ figcaption {
   margin: 1.25rem 0;
   border-left: 2px solid var(--accent);
   padding: 0.25rem 0 0.25rem 1.25rem;
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.5rem;
   line-height: 1.25;
   letter-spacing: -0.005em;
 }
 .tip :deep(strong) {
   font-weight: 400;
-  font-style: italic;
   color: var(--accent-ink);
 }
 table {
@@ -268,7 +266,9 @@ table {
 }
 th {
   font-size: 0.8rem;
-  font-variant-caps: all-small-caps;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted);
   font-weight: 500;

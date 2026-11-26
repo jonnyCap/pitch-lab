@@ -461,7 +461,7 @@ onBeforeUnmount(() => {
 }
 .head h2 {
   margin: 0;
-  font-size: clamp(2rem, 6vw, 2.8rem);
+  font-size: clamp(1.5rem, 3.2vw, 1.9rem);
   line-height: 1.02;
 }
 .kicker {
@@ -498,7 +498,7 @@ onBeforeUnmount(() => {
   transform: scale(0.94);
 }
 .pn {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.6rem;
   line-height: 1;
 }
@@ -618,7 +618,7 @@ onBeforeUnmount(() => {
   min-width: 5rem;
 }
 .points {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.6rem;
   line-height: 1;
   color: var(--accent-ink);
@@ -662,8 +662,8 @@ onBeforeUnmount(() => {
   font-size: 0.8rem;
 }
 .big {
-  font-family: var(--serif);
-  font-size: 3.2rem;
+  font-family: var(--display);
+  font-size: 2.6rem;
   font-weight: 400;
   line-height: 1;
 }

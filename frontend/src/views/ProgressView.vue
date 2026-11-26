@@ -246,8 +246,8 @@ const metric = (m: Record<string, unknown>, k: string) => m[k] as number | null
   padding-top: 0.75rem;
 }
 .stat .value {
-  font-family: var(--serif);
-  font-size: clamp(2.6rem, 6vw, 3.6rem);
+  font-family: var(--display);
+  font-size: clamp(2.1rem, 4.5vw, 2.8rem);
   line-height: 1;
   letter-spacing: -0.02em;
 }
@@ -259,7 +259,7 @@ const metric = (m: Record<string, unknown>, k: string) => m[k] as number | null
 }
 .section h2 {
   margin: 0.25rem 0 0.5rem;
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 .section .kicker {
   margin: 0 0 0.5rem;
@@ -277,7 +277,7 @@ const metric = (m: Record<string, unknown>, k: string) => m[k] as number | null
   line-height: 1.8;
 }
 .extremes strong {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
   font-size: 1.5rem;
   margin: 0 0.35rem;
@@ -301,8 +301,8 @@ const metric = (m: Record<string, unknown>, k: string) => m[k] as number | null
   margin: 0;
 }
 .band {
-  font-family: var(--serif);
-  font-size: 2.4rem;
+  font-family: var(--display);
+  font-size: 1.75rem;
   line-height: 1.1;
 }
 .upcoming {
@@ -354,7 +354,9 @@ table {
 }
 th {
   font-size: 0.8rem;
-  font-variant-caps: all-small-caps;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--muted);
   font-weight: 500;

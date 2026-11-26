@@ -138,8 +138,7 @@ const tip = computed(() => (hover.value === null ? null : pts.value[hover.value]
   margin: 0;
 }
 figcaption {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--display);
   font-size: 1.1rem;
   color: var(--muted);
   margin-bottom: 0.4rem;
@@ -172,7 +171,7 @@ svg {
 }
 .end {
   fill: var(--text);
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 17px;
 }
 .ref line,

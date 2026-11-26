@@ -119,7 +119,7 @@ const d = dur(450)
   stroke-dasharray: 1 2;
 }
 .lbl {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 11px;
   fill: var(--text);
 }

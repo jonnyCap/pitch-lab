@@ -142,7 +142,7 @@ async function choose(major: string) {
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.15rem;
   font-weight: 400;
   cursor: pointer;

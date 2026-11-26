@@ -173,7 +173,7 @@ button:disabled {
   background: var(--series) !important;
 }
 .c {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 0.9rem;
 }
 </style>

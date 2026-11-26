@@ -174,9 +174,9 @@ const delay = (i: number) => `${dur(70 * i + 150)}ms`
   min-height: 25rem;
 }
 h2 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(2rem, 7vw, 2.8rem);
+  font-size: clamp(1.5rem, 4vw, 1.9rem);
   line-height: 1.02;
   letter-spacing: -0.02em;
   margin: 0;
@@ -364,8 +364,8 @@ h2 em {
   align-items: center;
 }
 .big {
-  font-family: var(--serif);
-  font-size: clamp(2.6rem, 10vw, 3.6rem);
+  font-family: var(--display);
+  font-size: clamp(2.2rem, 7vw, 2.9rem);
   line-height: 1;
   letter-spacing: -0.02em;
 }
@@ -410,9 +410,9 @@ details ul {
   margin-bottom: 0.3rem;
 }
 .facts strong {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
-  font-size: 2.4rem;
+  font-size: 1.9rem;
   line-height: 1;
 }
 </style>

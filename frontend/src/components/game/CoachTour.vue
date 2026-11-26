@@ -322,7 +322,7 @@ defineExpose({ start })
 }
 .title {
   margin: 0 0 0.4rem;
-  font: 400 1.6rem/1.05 var(--serif, Georgia, serif);
+  font: 600 1.2rem/1.3 var(--display);
   letter-spacing: -0.01em;
 }
 .body {

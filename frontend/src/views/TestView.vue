@@ -210,8 +210,7 @@ const madDelta = computed(() => {
 
 <style scoped>
 .dek {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--display);
   font-size: 1.2rem;
   color: var(--muted);
   margin: -0.25rem 0 0.5rem;
@@ -221,9 +220,9 @@ const madDelta = computed(() => {
   margin-bottom: 1rem;
 }
 .result h2 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-weight: 400;
-  font-size: 2.2rem;
+  font-size: 1.6rem;
   margin-top: 0;
 }
 .band-row {
@@ -270,13 +269,13 @@ const madDelta = computed(() => {
   text-align: center;
 }
 .value {
-  font-family: var(--serif);
-  font-size: 2.8rem;
+  font-family: var(--display);
+  font-size: 2.2rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
 .hero .value {
-  font-size: 3.2rem;
+  font-size: 2.6rem;
 }
 .deltas {
   display: flex;

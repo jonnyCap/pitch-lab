@@ -30,7 +30,7 @@ const emit = defineEmits<{ click: [event: MouseEvent] }>()
   border-radius: 50%;
   background: var(--surface, #fff);
   color: var(--muted, #5f6168);
-  font: italic 400 1.05rem/1 var(--serif, Georgia, serif);
+  font: 500 1rem/1 var(--display);
   cursor: pointer;
   transition:
     color 0.18s var(--ease-out, ease),
