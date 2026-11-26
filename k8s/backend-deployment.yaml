@@ -27,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: pitchlab-backend
-          image: ghcr.io/jonnycap/pitchlab-backend:c842c48
+          image: ghcr.io/jonnycap/pitchlab-backend:9101bea
           imagePullPolicy: Always
           ports:
             - name: http
