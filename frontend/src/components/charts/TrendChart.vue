@@ -100,7 +100,7 @@ const tip = computed(() => (hover.value === null ? null : pts.value[hover.value]
           :y1="M.top"
           :y2="M.top + plotH"
         />
-        <path v-if="pts.length > 1" :d="line" class="line" />
+        <path v-if="pts.length > 1" :d="line" class="line" pathLength="1" />
         <circle v-for="p in pts" :key="p.key" :cx="p.cx" :cy="p.cy" r="4.5" class="dot" />
         <text v-if="last" class="end" :x="last.cx + 8" :y="last.cy" dy="0.32em">
           {{ pct(last.value) }}
@@ -138,7 +138,10 @@ const tip = computed(() => (hover.value === null ? null : pts.value[hover.value]
   margin: 0;
 }
 figcaption {
-  font-weight: 700;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--muted);
   margin-bottom: 0.4rem;
 }
 .plot {
@@ -169,7 +172,8 @@ svg {
 }
 .end {
   fill: var(--text);
-  font-weight: 700;
+  font-family: var(--serif);
+  font-size: 17px;
 }
 .ref line,
 .crosshair {
@@ -182,18 +186,34 @@ svg {
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
+  stroke-dasharray: 1;
+  animation: draw 0.9s cubic-bezier(0.3, 0.6, 0.2, 1) backwards;
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
 }
 .dot {
   fill: var(--series);
   stroke: var(--surface);
   stroke-width: 2;
+  animation: appear 0.4s 0.5s backwards;
+}
+.end {
+  animation: appear 0.4s 0.7s backwards;
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
 }
 .tooltip {
   position: absolute;
   transform: translate(-50%, -100%);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 0.3rem 0.55rem;
   display: flex;
   flex-direction: column;

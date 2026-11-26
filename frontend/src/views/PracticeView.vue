@@ -4,7 +4,7 @@
  * plan (due + gated new items) → question → answer → feedback (+ sound) →
  * FSRS update → items still in short-term learning are asked again → summary.
  */
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { db } from '@/data/db'
 import { mulberry32, randomSeed } from '@/lib/random'
@@ -18,6 +18,16 @@ import { playNotes, playStyled } from '@/learn/sound'
 import { noteValue } from '@/learn/rhythm'
 import StaffNotation from '@/components/learn/StaffNotation.vue'
 import RhythmNotation from '@/components/learn/RhythmNotation.vue'
+import {
+  CoachTour,
+  ComboMeter,
+  CountUp,
+  HelpButton,
+  ProgressTrack,
+  ResultStamp,
+} from '@/components/game'
+import { burst, haptic, popText, pulse, shake } from '@/lib/fx'
+import type { TourStep } from '@/lib/tour'
 import PianoKeyboard, { type KeyHighlight } from '@/components/learn/PianoKeyboard.vue'
 
 const props = defineProps<{ deck: string }>()
@@ -38,6 +48,33 @@ let shownAt = 0
 let advanceTimer: ReturnType<typeof setTimeout> | undefined
 
 const answered = ref(0)
+const results = ref<('ok' | 'bad' | null)[]>([])
+const combo = ref(0)
+const bestCombo = ref(0)
+const root = ref<HTMLElement | null>(null)
+const answersEl = ref<HTMLElement | null>(null)
+const summaryEl = ref<HTMLElement | null>(null)
+const tour = ref<InstanceType<typeof CoachTour> | null>(null)
+const TOUR: TourStep[] = [
+  {
+    target: '[data-tour="prompt"]',
+    title: 'The question',
+    body: 'Each card asks one small thing. Read it, listen if it is a sound.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="answers"]',
+    title: 'Your answer',
+    body: 'Tap an answer. Wrong ones come back a few cards later, so you only repeat what you need.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="hint"]',
+    title: 'Keyboard shortcuts',
+    body: 'You can answer without the mouse, and Enter moves on after a miss.',
+    placement: 'top',
+  },
+]
 const correctCount = ref(0)
 const nextDue = ref<number | null>(null)
 
@@ -99,7 +136,11 @@ async function answer(a: Answer, timeStamp = performance.now()) {
   lastCorrect.value = correct
   answered.value++
   if (correct) correctCount.value++
+  results.value[index.value] = correct ? 'ok' : 'bad'
+  combo.value = correct ? combo.value + 1 : 0
+  bestCombo.value = Math.max(bestCombo.value, combo.value)
   stage.value = 'feedback'
+  void nextTick(() => feedbackFx(correct))
 
   // Still in short-term learning → ask again a few questions later (max twice).
   const n = requeues.get(item.value) ?? 0
@@ -117,6 +158,24 @@ async function answer(a: Answer, timeStamp = performance.now()) {
   })
   void playFeedback(q)
   if (correct) advanceTimer = setTimeout(next, E2E ? 50 : 900)
+}
+
+function feedbackFx(correct: boolean) {
+  const el = root.value
+  if (!el) return
+  if (correct) {
+    const hit = el.querySelector('.choice.correct, .keyboard .correct')
+    if (hit) {
+      pulse(hit, 'ok')
+      popText(hit, '+1', 'ok')
+    }
+    haptic('ok')
+  } else {
+    if (answersEl.value) shake(answersEl.value)
+    const miss = el.querySelector('.choice.wrong, .keyboard .wrong')
+    if (miss) pulse(miss, 'bad')
+    haptic('bad')
+  }
 }
 
 async function playFeedback(q: Question) {
@@ -211,6 +270,41 @@ const keyHighlights = computed<KeyHighlight[]>(() => {
   return out
 })
 
+const explanation = computed(() => {
+  const q = question.value
+  if (!q) return ''
+  const iv =
+    q.kind === 'ear-interval'
+      ? q.ear.interval
+      : q.kind === 'sight-interval'
+        ? q.sight.interval
+        : null
+  if (iv) {
+    const n = intervalById(iv).semitones
+    return `${n} semitone${n === 1 ? '' : 's'} apart.`
+  }
+  if (q.kind === 'name-key') return 'Every key with that name is marked, in each octave.'
+  return ''
+})
+
+const hint = computed(() => {
+  const q = question.value
+  if (!q) return ''
+  switch (q.kind) {
+    case 'staff-letter':
+      return 'Press A–G'
+    case 'name-key':
+    case 'staff-key':
+      return 'Tap or click a key'
+    case 'ear-interval':
+      return `Press 1–${q.choices.length}, R to replay`
+    case 'sight-interval':
+      return `Press 1–${q.choices.length}`
+    default:
+      return `Press 1–${Math.min(9, q.choices.length)}${q.visual.type === 'audio' ? ', R to replay' : ''}`
+  }
+})
+
 const correctText = computed(() => {
   const q = question.value
   if (!q) return ''
@@ -244,34 +338,61 @@ const e2eAnswer = computed(() => {
   return String(correctAnswer(q))
 })
 
+const pct = computed(() =>
+  answered.value ? Math.round((correctCount.value / answered.value) * 100) : 0,
+)
 const modeLabel = { asc: 'rising', desc: 'falling', harm: 'together' } as const
 const noteEvent = (code: string) => {
   const v = noteValue(code)
   return { code: v.code, beats: v.beats, rest: v.rest }
 }
-const pct = computed(() =>
-  answered.value ? Math.round((correctCount.value / answered.value) * 100) : 0,
+
+watch(
+  () => stage.value === 'done' && pct.value >= 90,
+  async (celebrate) => {
+    if (!celebrate) return
+    await nextTick()
+    if (summaryEl.value) burst(summaryEl.value)
+  },
 )
 </script>
 
 <template>
-  <p class="muted crumbs"><RouterLink to="/learn">Learn</RouterLink> / {{ deck.title }}</p>
-  <h1>{{ deck.title }}</h1>
+  <p class="muted crumbs">
+    <RouterLink to="/learn">Learn</RouterLink> <span aria-hidden="true">/</span> {{ deck.title }}
+  </p>
+  <div class="titlebar">
+    <h1>{{ deck.title }}</h1>
+    <HelpButton v-if="stage === 'question' || stage === 'feedback'" @click="tour?.start()" />
+  </div>
+
+  <div v-if="stage === 'question' || stage === 'feedback'" class="hud">
+    <ProgressTrack :total="queue.length" :index="index" :results="results" />
+    <div class="hud-row">
+      <span class="muted count">{{ index + 1 }} / {{ queue.length }}</span>
+      <span v-if="isNew && stage === 'question'" class="new">new</span>
+      <ComboMeter class="combo" :combo="combo" :best="bestCombo" />
+    </div>
+  </div>
 
   <p v-if="stage === 'loading'" class="muted">Loading…</p>
 
-  <section v-else-if="stage === 'empty'" class="card">
-    <p>Nothing to practise right now — everything is learned and scheduled for later. 🎉</p>
+  <section v-else-if="stage === 'empty'" class="card empty">
+    <p class="serif">Nothing to practise right now.</p>
+    <p class="muted">Everything is learned and scheduled for later.</p>
     <RouterLink class="btn" to="/learn">Back to Learn</RouterLink>
   </section>
 
-  <section v-else-if="stage === 'done'" class="card summary">
+  <section v-else-if="stage === 'done'" ref="summaryEl" class="card summary">
+    <ResultStamp v-if="pct === 100" text="Perfect" tone="ok" />
     <h2>
-      {{ pct }}% <small class="muted">({{ correctCount }}/{{ answered }})</small>
+      <CountUp :value="pct" suffix="%" />
+      <small class="muted">({{ correctCount }}/{{ answered }})</small>
     </h2>
     <p v-if="newItems.length">
       New today: {{ newItems.length }} item{{ newItems.length === 1 ? '' : 's' }}.
     </p>
+    <p v-if="bestCombo >= 2" class="muted">Best streak ×{{ bestCombo }}.</p>
     <p v-if="nextDue" class="muted">
       Next review
       {{
@@ -292,6 +413,7 @@ const pct = computed(() =>
 
   <section
     v-else-if="question"
+    ref="root"
     :key="`card-${index}`"
     class="card practice"
     :data-stage="stage"
@@ -299,131 +421,148 @@ const pct = computed(() =>
     :data-kind="question.kind"
     :data-e2e-answer="e2eAnswer"
   >
-    <div class="topline">
-      <span class="muted">{{ index + 1 }} / {{ queue.length }}</span>
-      <span v-if="isNew && stage === 'question'" class="new">new</span>
-    </div>
-
     <!-- Prompt -->
-    <template v-if="question.kind === 'staff-letter' || question.kind === 'staff-key'">
-      <p class="prompt">
-        {{
-          question.kind === 'staff-letter'
-            ? 'Which note is this?'
-            : 'Play this note on the keyboard.'
-        }}
-      </p>
-      <StaffNotation :clef="question.clef" :notes="[question.note]" />
-    </template>
-    <template v-else-if="question.kind === 'name-key'">
-      <p class="prompt">Find this note on the keyboard:</p>
-      <p class="big">{{ prettyPitch(question.pitch) }}</p>
-    </template>
-    <template v-else-if="question.kind === 'ear-interval'">
-      <p class="prompt">
-        Which interval? <span class="muted">({{ modeLabel[question.ear.mode] }})</span>
-      </p>
-      <button class="btn replay" @click="playEar">▶ Play again <kbd>R</kbd></button>
-    </template>
-    <template v-else-if="question.kind === 'choice'">
-      <p class="prompt">{{ question.prompt }}</p>
-      <StaffNotation
-        v-if="question.visual.type === 'staff'"
-        :clef="question.visual.clef"
-        :notes="question.visual.notes"
-        :harmonic="question.visual.harmonic"
-        :key-signature="question.visual.keySignature"
-        :width="question.visual.notes.length > 4 ? 330 : 240"
-      />
-      <button v-else-if="question.visual.type === 'audio'" class="btn replay" @click="playEar">
-        ▶ Play again <kbd>R</kbd>
-      </button>
-      <RhythmNotation v-else :bars="[[noteEvent(question.visual.code)]]" :width="120" />
-    </template>
-    <template v-else-if="question.kind === 'sight-interval'">
-      <p class="prompt">Which interval is written here?</p>
-      <StaffNotation
-        clef="treble"
-        :notes="[question.sight.lower, question.sight.upper]"
-        :harmonic="question.sight.harmonic"
-      />
-    </template>
+    <div class="stage-prompt" data-tour="prompt">
+      <template v-if="question.kind === 'staff-letter' || question.kind === 'staff-key'">
+        <p class="prompt">
+          {{ question.kind === 'staff-letter' ? 'Which note is this?' : 'Play this note.' }}
+        </p>
+        <StaffNotation :clef="question.clef" :notes="[question.note]" />
+      </template>
+      <template v-else-if="question.kind === 'name-key'">
+        <p class="prompt">Find this note.</p>
+        <p class="big">{{ prettyPitch(question.pitch) }}</p>
+      </template>
+      <template v-else-if="question.kind === 'ear-interval'">
+        <p class="prompt">
+          Which interval? <em class="muted">{{ modeLabel[question.ear.mode] }}</em>
+        </p>
+        <button class="btn replay" @click="playEar">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path d="M5 3l8 5-8 5z" fill="none" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+          Play again <kbd>R</kbd>
+        </button>
+      </template>
+      <template v-else-if="question.kind === 'choice'">
+        <p class="prompt">{{ question.prompt }}</p>
+        <StaffNotation
+          v-if="question.visual.type === 'staff'"
+          :clef="question.visual.clef"
+          :notes="question.visual.notes"
+          :harmonic="question.visual.harmonic"
+          :key-signature="question.visual.keySignature"
+          :width="question.visual.notes.length > 4 ? 330 : 240"
+        />
+        <button v-else-if="question.visual.type === 'audio'" class="btn replay" @click="playEar">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path d="M5 3l8 5-8 5z" fill="none" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+          Play again <kbd>R</kbd>
+        </button>
+        <RhythmNotation v-else :bars="[[noteEvent(question.visual.code)]]" :width="120" />
+      </template>
+      <template v-else-if="question.kind === 'sight-interval'">
+        <p class="prompt">Which interval is written here?</p>
+        <StaffNotation
+          clef="treble"
+          :notes="[question.sight.lower, question.sight.upper]"
+          :harmonic="question.sight.harmonic"
+        />
+      </template>
+    </div>
 
     <!-- Answer input -->
-    <div v-if="question.kind === 'staff-letter'" class="choices letters">
-      <button
-        v-for="l in LETTERS"
-        :key="l"
-        :data-choice="l"
-        class="btn choice"
-        :class="{
-          correct: stage === 'feedback' && l === parseNote(question.note).letter,
-          wrong: stage === 'feedback' && !lastCorrect && l === lastAnswer,
-        }"
+    <div ref="answersEl" class="answers" data-tour="answers">
+      <div v-if="question.kind === 'staff-letter'" class="choices letters">
+        <button
+          v-for="l in LETTERS"
+          :key="l"
+          :data-choice="l"
+          class="btn choice"
+          :class="{
+            correct: stage === 'feedback' && l === parseNote(question.note).letter,
+            wrong: stage === 'feedback' && !lastCorrect && l === lastAnswer,
+          }"
+          :disabled="stage !== 'question'"
+          @pointerdown.prevent="answer(l, $event.timeStamp)"
+        >
+          {{ l }}
+        </button>
+      </div>
+      <PianoKeyboard
+        v-else-if="question.kind === 'name-key' || question.kind === 'staff-key'"
+        :lo="question.keyboard[0]"
+        :hi="question.keyboard[1]"
+        label-c
         :disabled="stage !== 'question'"
-        @pointerdown.prevent="answer(l, $event.timeStamp)"
-      >
-        {{ l }}
-      </button>
-    </div>
-    <PianoKeyboard
-      v-else-if="question.kind === 'name-key' || question.kind === 'staff-key'"
-      :lo="question.keyboard[0]"
-      :hi="question.keyboard[1]"
-      label-c
-      :disabled="stage !== 'question'"
-      :highlights="keyHighlights"
-      @press="(m, ts) => answer(m, ts)"
-    />
-    <div v-else-if="question.kind === 'choice'" class="choices wide">
-      <button
-        v-for="(c, i) in question.choices"
-        :key="c.id"
-        :data-choice="c.id"
-        class="btn choice"
-        :class="{
-          correct: stage === 'feedback' && c.id === question.answer,
-          wrong: stage === 'feedback' && !lastCorrect && c.id === lastAnswer,
-        }"
-        :disabled="stage !== 'question'"
-        @pointerdown.prevent="answer(c.id, $event.timeStamp)"
-      >
-        {{ c.label }} <kbd v-if="i < 9">{{ i + 1 }}</kbd>
-      </button>
-    </div>
-    <div v-else class="choices">
-      <button
-        v-for="(c, i) in question.choices"
-        :key="c"
-        :data-choice="c"
-        class="btn choice"
-        :class="{
-          correct: stage === 'feedback' && c === correctAnswer(question),
-          wrong: stage === 'feedback' && !lastCorrect && c === lastAnswer,
-        }"
-        :disabled="stage !== 'question'"
-        :title="intervalById(c).long"
-        @pointerdown.prevent="answer(c, $event.timeStamp)"
-      >
-        {{ intervalById(c).short }} <kbd>{{ i + 1 }}</kbd>
-      </button>
+        :highlights="keyHighlights"
+        @press="(m, ts) => answer(m, ts)"
+      />
+      <div v-else-if="question.kind === 'choice'" class="choices wide">
+        <button
+          v-for="(c, i) in question.choices"
+          :key="c.id"
+          :data-choice="c.id"
+          class="btn choice"
+          :class="{
+            correct: stage === 'feedback' && c.id === question.answer,
+            wrong: stage === 'feedback' && !lastCorrect && c.id === lastAnswer,
+          }"
+          :disabled="stage !== 'question'"
+          @pointerdown.prevent="answer(c.id, $event.timeStamp)"
+        >
+          {{ c.label }} <kbd v-if="i < 9">{{ i + 1 }}</kbd>
+        </button>
+      </div>
+      <div v-else class="choices">
+        <button
+          v-for="(c, i) in question.choices"
+          :key="c"
+          :data-choice="c"
+          class="btn choice"
+          :class="{
+            correct: stage === 'feedback' && c === correctAnswer(question),
+            wrong: stage === 'feedback' && !lastCorrect && c === lastAnswer,
+          }"
+          :disabled="stage !== 'question'"
+          :title="intervalById(c).long"
+          @pointerdown.prevent="answer(c, $event.timeStamp)"
+        >
+          {{ intervalById(c).short }} <kbd>{{ i + 1 }}</kbd>
+        </button>
+      </div>
     </div>
 
     <!-- Feedback -->
-    <div class="feedback" aria-live="polite">
+    <div
+      class="feedback"
+      aria-live="polite"
+      :data-result="stage === 'feedback' ? (lastCorrect ? 'ok' : 'bad') : undefined"
+    >
       <template v-if="stage === 'feedback'">
         <span :class="lastCorrect ? 'ok' : 'bad'">{{
           lastCorrect ? '✓ Correct' : '✗ Not quite'
         }}</span>
-        <span v-if="!lastCorrect">
-          — it was <strong>{{ correctText }}</strong></span
-        >
-        <button v-if="!lastCorrect" class="btn btn-primary" @click="next">
-          Continue <kbd>↵</kbd>
-        </button>
+        <template v-if="!lastCorrect">
+          <span>
+            — it was <strong>{{ correctText }}</strong></span
+          >
+          <span v-if="explanation" class="muted why">{{ explanation }}</span>
+          <button class="btn btn-primary" @click="next">Continue <kbd>↵</kbd></button>
+        </template>
       </template>
+      <span v-else class="hint muted" data-tour="hint">{{ hint }}</span>
     </div>
   </section>
+
+  <CoachTour
+    v-if="stage === 'question' || stage === 'feedback'"
+    ref="tour"
+    id="practice"
+    :steps="TOUR"
+    :auto-start="answered === 0"
+  />
 </template>
 
 <style scoped>
@@ -431,10 +570,46 @@ const pct = computed(() =>
   margin: 0;
   font-size: 0.9rem;
 }
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.titlebar h1 {
+  font-size: clamp(2rem, 6vw, 2.8rem);
+}
+.hud {
+  margin: 0.5rem 0 1rem;
+}
+.hud-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+.hud-row .combo {
+  margin-left: auto;
+}
+.count {
+  font-family: var(--mono);
+}
+.empty,
+.summary {
+  text-align: center;
+  align-items: center;
+}
+.serif {
+  font-family: var(--serif);
+  font-size: 1.8rem;
+  margin: 0;
+}
 .practice {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1.25rem;
+  padding-block: 1.75rem;
 }
 /* Each new card is dealt in with a slight 3D tilt. */
 .practice {
@@ -447,29 +622,42 @@ const pct = computed(() =>
     transform: perspective(900px) rotateX(10deg) translateY(10px);
   }
 }
-.topline {
+.stage-prompt {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
 }
 .new {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
   color: var(--accent-ink);
 }
 .prompt {
   margin: 0;
-  font-weight: 600;
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 5.5vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
   text-align: center;
 }
+.prompt em {
+  font-size: 0.7em;
+}
 .big {
-  font-size: 3rem;
-  font-weight: 800;
+  font-family: var(--serif);
+  font-size: clamp(4.5rem, 16vw, 6rem);
+  font-weight: 400;
+  line-height: 1;
   text-align: center;
-  margin: 0.5rem 0;
+  margin: 0;
 }
 .replay {
   align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 .choices {
   display: flex;
@@ -479,13 +667,21 @@ const pct = computed(() =>
 }
 .choice {
   min-width: 3.5rem;
+  min-height: 3rem;
   touch-action: manipulation;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    transform 0.1s;
 }
 .wide .choice {
   min-width: 9rem;
 }
 .letters .choice {
-  min-width: 2.8rem;
+  min-width: 3rem;
+  font-family: var(--serif);
+  font-size: 1.4rem;
 }
 .choice.correct {
   background: var(--ok);
@@ -502,12 +698,24 @@ kbd {
   opacity: 0.55;
 }
 .feedback {
-  min-height: 2.5rem;
+  min-height: 3rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.25rem 0.6rem;
+  text-align: center;
+}
+.feedback[data-result='bad'] {
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+}
+.why {
+  flex-basis: 100%;
+  font-size: 0.9rem;
+}
+.hint {
+  font-size: 0.85rem;
 }
 .ok {
   color: var(--ok);
@@ -517,16 +725,32 @@ kbd {
   color: var(--bad);
   font-weight: 700;
 }
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-block: 2.25rem;
+}
 .summary h2 {
+  margin: 0.5rem 0 0;
+  font-size: clamp(3.6rem, 14vw, 5.5rem);
+  line-height: 1;
+}
+.summary h2 small {
+  font-family: var(--sans);
+  font-size: 1rem;
+}
+.summary p {
   margin: 0;
-  font-size: 2rem;
 }
 .row {
   display: flex;
   gap: 0.75rem;
+  margin-top: 1rem;
 }
 @media (hover: none) {
-  kbd {
+  kbd,
+  .hint {
     display: none;
   }
 }

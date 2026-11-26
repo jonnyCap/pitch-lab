@@ -7,6 +7,9 @@ import RichText from '@/components/learn/RichText.vue'
 import StaffNotation from '@/components/learn/StaffNotation.vue'
 import PianoKeyboard from '@/components/learn/PianoKeyboard.vue'
 import CircleOfFifths from '@/components/learn/CircleOfFifths.vue'
+import IntervalCircle from '@/components/viz/IntervalCircle.vue'
+import ScaleStairs from '@/components/viz/ScaleStairs.vue'
+import ChordStack from '@/components/viz/ChordStack.vue'
 import RhythmNotation from '@/components/learn/RhythmNotation.vue'
 import { parseNote } from '@/learn/notes'
 import { noteOnsets, noteValue, type RhythmEvent } from '@/learn/rhythm'
@@ -14,6 +17,27 @@ import { audio } from '@/audio/engine'
 
 const props = defineProps<{ id: string }>()
 const lesson = computed(() => lessonById(props.id))
+
+const MODULES: Record<string, string> = {
+  notes: 'Notes & staff',
+  intervals: 'Intervals',
+  harmony: 'Scales, keys & chords',
+  rhythm: 'Rhythm',
+}
+const FIGURES = new Set(['staff', 'circle', 'rhythm', 'keyboard', 'viz'])
+/** Figure number for each block (0 = not a figure), counted in reading order. */
+const figNo = computed(() => {
+  let n = 0
+  return (lesson.value?.blocks ?? []).map((b) => (FIGURES.has(b.type) ? ++n : 0))
+})
+/** "Sections" number the h2 blocks; paragraphs before the first one are the lead. */
+const secNo = computed(() => {
+  let n = 0
+  return (lesson.value?.blocks ?? []).map((b) => (b.type === 'h' ? ++n : 0))
+})
+const firstPara = computed(() => (lesson.value?.blocks ?? []).findIndex((b) => b.type === 'p'))
+const fig = (i: number, caption?: string) =>
+  caption ? `Fig. ${figNo.value[i]} — ${caption}` : `Fig. ${figNo.value[i]}`
 
 function pressKey(midi: number) {
   void playNotes([midi])
@@ -48,14 +72,23 @@ function playRhythm(bars: string[][]) {
 
 <template>
   <template v-if="lesson">
-    <p class="muted crumbs"><RouterLink to="/learn">Learn</RouterLink> / {{ lesson.title }}</p>
-    <h1>{{ lesson.title }}</h1>
-    <article class="card lesson">
-      <template v-for="(b, i) in lesson.blocks" :key="i">
-        <h2 v-if="b.type === 'h'">{{ b.text }}</h2>
-        <p v-else-if="b.type === 'p'"><RichText :text="b.text" /></p>
+    <article class="lesson">
+      <header class="head">
+        <p class="kicker crumbs">
+          <RouterLink to="/learn">Learn</RouterLink> · {{ MODULES[lesson.module] }}
+        </p>
+        <h1>{{ lesson.title }}</h1>
+        <p class="dek">{{ lesson.summary }}</p>
+      </header>
+      <template v-for="(b, i) in lesson.blocks" :key="`b-${i}`">
+        <h2 v-if="b.type === 'h'" class="sec">
+          <span class="num">{{ String(secNo[i]).padStart(2, '0') }}</span> {{ b.text }}
+        </h2>
+        <p v-else-if="b.type === 'p'" :class="{ lead: i === firstPara }">
+          <RichText :text="b.text" />
+        </p>
         <ul v-else-if="b.type === 'list'">
-          <li v-for="(it, j) in b.items" :key="j"><RichText :text="it" /></li>
+          <li v-for="(it, j) in b.items" :key="`li-${j}`"><RichText :text="it" /></li>
         </ul>
         <figure v-else-if="b.type === 'staff'">
           <StaffNotation
@@ -65,18 +98,23 @@ function playRhythm(bars: string[][]) {
             :key-signature="b.keySignature"
             :width="b.notes.length > 4 ? 340 : 260"
           />
-          <figcaption v-if="b.caption" class="muted">
-            {{ b.caption }}
+          <figcaption class="fig-caption">
+            {{ fig(i, b.caption) }}
             <button v-if="b.play" class="btn small" @click="playStaff(b.notes, b.harmonic)">
               ▶
             </button>
           </figcaption>
         </figure>
-        <CircleOfFifths v-else-if="b.type === 'circle'" />
+        <figure v-else-if="b.type === 'circle'">
+          <CircleOfFifths />
+          <figcaption class="fig-caption">
+            {{ fig(i, 'The circle of fifths. Tap a key to turn the circle and hear its scale.') }}
+          </figcaption>
+        </figure>
         <figure v-else-if="b.type === 'rhythm'">
           <RhythmNotation :bars="events(b.bars)" time-signature="4/4" />
-          <figcaption class="muted">
-            {{ b.caption }}
+          <figcaption class="fig-caption">
+            {{ fig(i, b.caption) }}
             <button class="btn small" @click="playRhythm(b.bars)">▶ Listen</button>
           </figcaption>
         </figure>
@@ -88,14 +126,36 @@ function playRhythm(bars: string[][]) {
             :highlights="(b.mark ?? []).map((m) => ({ midi: m, kind: 'mark' as const }))"
             @press="pressKey"
           />
-          <figcaption v-if="b.caption" class="muted">
-            {{ b.caption }} Tap a key to hear it.
-          </figcaption>
+          <figcaption class="fig-caption">{{ fig(i, b.caption) }} Tap a key to hear it.</figcaption>
         </figure>
+        <template v-else-if="b.type === 'viz'">
+          <IntervalCircle
+            v-if="b.viz === 'interval'"
+            :lower="b.lower"
+            :upper="b.upper"
+            :caption="fig(i, b.caption)"
+          />
+          <ScaleStairs
+            v-else-if="b.viz === 'scale'"
+            :tonic="b.tonic"
+            :pattern="b.pattern"
+            :name="b.name"
+            :caption="fig(i, b.caption)"
+          />
+          <ChordStack
+            v-else
+            :root="b.root"
+            :quality="b.quality"
+            :inversion="b.inversion"
+            :caption="fig(i, b.caption)"
+          />
+        </template>
         <p v-else-if="b.type === 'play'">
           <button class="btn" @click="playNotes(b.midis, b.harmonic)">▶ {{ b.label }}</button>
         </p>
-        <p v-else-if="b.type === 'tip'" class="tip"><RichText :text="b.text" /></p>
+        <blockquote v-else-if="b.type === 'tip'" class="tip">
+          <RichText :text="b.text" />
+        </blockquote>
         <table v-else-if="b.type === 'table'">
           <thead>
             <tr>
@@ -103,8 +163,8 @@ function playRhythm(bars: string[][]) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, j) in b.rows" :key="j">
-              <td v-for="(c, k) in r" :key="k">{{ c }}</td>
+            <tr v-for="(r, j) in b.rows" :key="`r-${j}`">
+              <td v-for="(c, k) in r" :key="`c-${k}`">{{ c }}</td>
             </tr>
           </tbody>
         </table>
@@ -118,45 +178,109 @@ function playRhythm(bars: string[][]) {
 </template>
 
 <style scoped>
-.crumbs {
-  margin: 0;
-  font-size: 0.9rem;
-}
 .lesson {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  line-height: 1.6;
+  gap: 0.6rem;
+  line-height: 1.7;
+  max-width: 42rem;
+  margin: 0 auto;
+}
+.head {
+  border-bottom: 1px solid var(--text);
+  padding-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.crumbs {
+  margin: 0 0 0.75rem;
+}
+.crumbs a {
+  color: inherit;
+}
+h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 7vw, 3.8rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.dek {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.35rem;
+  line-height: 1.3;
+  color: var(--muted);
+  margin: 0.75rem 0 0;
+}
+.lead {
+  font-size: 1.15rem;
+}
+.sec {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.8rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  margin: 1.5rem 0 0;
+}
+.sec .num {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--accent-ink);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+p,
+ul {
+  margin: 0;
 }
 figure {
-  margin: 0.5rem 0;
+  margin: 1rem 0;
+  text-align: center;
 }
 figcaption {
-  text-align: center;
-  font-size: 0.85rem;
+  margin-top: 0.4rem;
 }
 .btn.small {
   padding: 0.15rem 0.6rem;
   margin-left: 0.4rem;
 }
 .tip {
-  border-left: 3px solid var(--series);
-  padding: 0.25rem 0.75rem;
-  background: var(--bg);
-  border-radius: 0 8px 8px 0;
+  margin: 1.25rem 0;
+  border-left: 2px solid var(--accent);
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+.tip :deep(strong) {
+  font-weight: 400;
+  font-style: italic;
+  color: var(--accent-ink);
 }
 table {
   border-collapse: collapse;
-  margin: 0.5rem 0;
+  margin: 0.75rem 0;
+  width: 100%;
+  font-size: 0.95rem;
+}
+th {
+  font-size: 0.8rem;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 500;
 }
 th,
 td {
   text-align: left;
-  padding: 0.3rem 0.75rem 0.3rem 0;
-  border-bottom: 1px solid var(--border);
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  border-bottom: 1px solid var(--line);
 }
 .btn-primary {
   align-self: flex-start;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 </style>

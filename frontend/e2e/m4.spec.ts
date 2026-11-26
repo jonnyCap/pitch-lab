@@ -76,7 +76,7 @@ test('rhythm: calibrate, then three accurate patterns unlock level 2', async ({ 
       ).__rhythm
       for (const o of r.expectedOffsets()) r.tapAtBar(o + 10)
     })
-    await expect(page.locator('.result h2')).toHaveText('100%', { timeout: 15_000 })
+    await expect(page.locator('.result h2')).toContainText('100%', { timeout: 15_000 })
     if (n < 2) {
       await expect(page.getByText(`${n + 1}/3 patterns`)).toBeVisible()
       await page.getByRole('button', { name: 'New pattern' }).click()

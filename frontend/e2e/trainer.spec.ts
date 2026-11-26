@@ -9,7 +9,7 @@ test('onboarding → pretest → pass the first training step → progress', asy
   await page.goto('/trainer')
   await page.getByRole('button', { name: 'Sounds good' }).click()
   await page.getByRole('button', { name: 'Got it' }).click()
-  await page.getByRole('button', { name: 'Continue to the test' }).click()
+  await page.getByRole('button', { name: 'Start the baseline test' }).click()
 
   // Pretest: 96 notes, answer everything one semitone sharp → 0% exact, 100% within one.
   await expect(page).toHaveURL(/\/test\/pretest$/)
@@ -18,8 +18,9 @@ test('onboarding → pretest → pass the first training step → progress', asy
   expect(pretestAnswers).toBe(96)
   await expect(page.getByRole('heading', { name: 'Your result' })).toBeVisible()
   await expect(page.getByText('exactly right (chance ≈ 8%)')).toBeVisible()
-  await expect(page.locator('.stats .value').first()).toHaveText('0%')
-  await expect(page.locator('.stats .value').nth(1)).toHaveText('100%')
+  // Values count up; `data-final` holds the final text.
+  await expect(page.locator('.stats .value').first()).toHaveAttribute('data-final', '0%')
+  await expect(page.locator('.stats .value').nth(1)).toHaveAttribute('data-final', '100%')
 
   // First training step (E, F, F♯; feedback): answer correctly → pass.
   await page.getByRole('link', { name: 'Go to training' }).click()

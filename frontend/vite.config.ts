@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Pitch Lab',
         short_name: 'Pitch Lab',
         description: 'Learn music fundamentals and train absolute pitch.',
-        theme_color: '#f4f3ee',
-        background_color: '#f4f3ee',
+        theme_color: '#F7F7F4',
+        background_color: '#F7F7F4',
         display: 'standalone',
         start_url: '/',
         icons: [

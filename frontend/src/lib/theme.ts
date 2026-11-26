@@ -6,7 +6,7 @@ import { ref, watch } from 'vue'
 
 export type ThemePref = 'auto' | 'light' | 'dark'
 const KEY = 'pitchlab-theme'
-const META = { light: '#f4f3ee', dark: '#141517' }
+const META = { light: '#F7F7F4', dark: '#0F1013' }
 
 function read(): ThemePref {
   try {

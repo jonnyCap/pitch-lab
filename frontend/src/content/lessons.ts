@@ -4,6 +4,7 @@
  * Inline **bold** is supported in text.
  */
 import type { Clef } from '@/learn/notes'
+import { SCALE_PATTERNS, type ChordQuality } from '@/components/viz/geometry'
 
 export type LessonBlock =
   | { type: 'h'; text: string }
@@ -27,6 +28,24 @@ export type LessonBlock =
   /** Play button: notes as MIDI numbers, played one after another or together. */
   | { type: 'play'; label: string; midis: number[]; harmonic?: boolean }
   | { type: 'tip'; text: string }
+  /** Animated 3D figure: interval ring, scale staircase or chord stack (all tap-to-hear). */
+  | { type: 'viz'; viz: 'interval'; lower: number; upper: number; caption: string }
+  | {
+      type: 'viz'
+      viz: 'scale'
+      tonic: number
+      pattern: readonly number[]
+      name: string
+      caption: string
+    }
+  | {
+      type: 'viz'
+      viz: 'chord'
+      root: number
+      quality: ChordQuality
+      inversion?: number
+      caption: string
+    }
   | { type: 'table'; head: string[]; rows: string[][] }
 
 export interface Lesson {
@@ -173,6 +192,13 @@ export const LESSONS: readonly Lesson[] = [
         text: 'Its **quality** comes from the number of semitones: C–E (4 semitones) is a **major 3rd**, C–E♭ (3 semitones) a **minor 3rd**.',
       },
       {
+        type: 'viz',
+        viz: 'interval',
+        lower: 60,
+        upper: 64,
+        caption: 'Count the semitones round the chroma circle: C up to E is 4 — a major 3rd.',
+      },
+      {
         type: 'table',
         head: ['Interval', 'Semitones', 'Example from C'],
         rows: [
@@ -224,6 +250,13 @@ export const LESSONS: readonly Lesson[] = [
       { type: 'play', label: 'Major 3rd (C–E)', midis: [60, 64] },
       { type: 'play', label: 'Octave (C–C)', midis: [60, 72] },
       { type: 'play', label: 'Major 3rd, together', midis: [60, 64], harmonic: true },
+      {
+        type: 'viz',
+        viz: 'interval',
+        lower: 60,
+        upper: 67,
+        caption: 'A perfect 5th spans 7 of the 12 pitch classes — over half the circle.',
+      },
       { type: 'p', text: 'Many musicians use the opening of a well-known tune as a memory hook:' },
       {
         type: 'table',
@@ -260,6 +293,14 @@ const HARMONY_LESSONS: Lesson[] = [
       {
         type: 'p',
         text: 'A **scale** is a ladder of seven notes, one per letter name, from a tonic up to its octave. The pattern of **whole steps** (W, 2 semitones) and **half steps** (H, 1 semitone) gives each scale its colour.',
+      },
+      {
+        type: 'viz',
+        viz: 'scale',
+        tonic: 60,
+        pattern: SCALE_PATTERNS.major,
+        name: 'C major',
+        caption: 'Half steps are the short risers: only E–F and B–C.',
       },
       {
         type: 'staff',
@@ -326,6 +367,14 @@ const HARMONY_LESSONS: Lesson[] = [
           ['Aeolian (= natural minor)', 'A', 'sad, serious'],
           ['Locrian', 'B', 'lowered 2nd and 5th — unstable'],
         ],
+      },
+      {
+        type: 'viz',
+        viz: 'scale',
+        tonic: 62,
+        pattern: SCALE_PATTERNS.dorian,
+        name: 'D Dorian',
+        caption: 'The white keys from D: the half steps move to E–F and B–C, a different shape.',
       },
       {
         type: 'staff',
@@ -420,6 +469,13 @@ const HARMONY_LESSONS: Lesson[] = [
         ],
       },
       {
+        type: 'viz',
+        viz: 'chord',
+        root: 60,
+        quality: 'maj',
+        caption: 'Two stacked thirds: a major 3rd (M3) under a minor 3rd (m3).',
+      },
+      {
         type: 'staff',
         clef: 'treble',
         notes: ['C4', 'E4', 'G4'],
@@ -482,6 +538,13 @@ const HARMONY_LESSONS: Lesson[] = [
         harmonic: true,
         caption: 'G7 (dominant 7th)',
         play: true,
+      },
+      {
+        type: 'viz',
+        viz: 'chord',
+        root: 67,
+        quality: 'dom7',
+        caption: 'G7 as three stacked thirds. Pick an inversion to see the bass note change.',
       },
       {
         type: 'p',

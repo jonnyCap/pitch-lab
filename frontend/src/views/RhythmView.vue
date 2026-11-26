@@ -19,14 +19,18 @@ import {
   noteOnsets,
   PASS_SCORE,
   PASSES_TO_ADVANCE,
-  RHYTHM_LEVELS,
   scoreTaps,
   type RhythmEvent,
   type RhythmProgress,
   type TapResult,
 } from '@/learn/rhythm'
 import { loadRhythmProgress, logRhythmAttempt, saveRhythmProgress } from '@/learn/store'
+import { CoachTour, CountUp, HelpButton, ResultStamp } from '@/components/game'
+import { haptic } from '@/lib/fx'
+import type { TourStep } from '@/lib/tour'
 import RhythmNotation from '@/components/learn/RhythmNotation.vue'
+import BeatDots from '@/components/learn/BeatDots.vue'
+import TimingLane from '@/components/learn/TimingLane.vue'
 
 const E2E = import.meta.env.MODE === 'e2e'
 const CAL_BPM = 90
@@ -48,6 +52,30 @@ const result = shallowRef<TapResult | null>(null)
 const levelUp = ref(false)
 const calMessage = ref<string | null>(null)
 const beatIndex = ref(-1)
+const tapCount = ref(0)
+const ripples = ref<{ id: number; x: number; y: number }[]>([])
+const tour = ref<InstanceType<typeof CoachTour> | null>(null)
+let rippleId = 0
+const TOUR: TourStep[] = [
+  {
+    target: '[data-tour="notation"]',
+    title: 'Read the rhythm',
+    body: 'Two bars of 4/4. Every note head is a tap, rests are silence.',
+    placement: 'bottom',
+  },
+  {
+    target: '[data-tour="listen"]',
+    title: 'Listen first',
+    body: 'Hear the pattern against the metronome before you try it.',
+    placement: 'top',
+  },
+  {
+    target: '[data-tour="tap"]',
+    title: 'Tap it',
+    body: 'After a one-bar count-in, tap each note on the pad or with Space. Three clean patterns unlock the next level.',
+    placement: 'top',
+  },
+]
 
 let taps: number[] = []
 let expectedPerf: number[] = []
@@ -88,6 +116,7 @@ async function calibrate() {
   clearTimers()
   calMessage.value = null
   taps = []
+  tapCount.value = 0
   stage.value = 'calibrating'
   const b = 60 / CAL_BPM
   const sounds = await audio.playClicks(
@@ -143,6 +172,7 @@ async function listen() {
 async function startTapping() {
   clearTimers()
   taps = []
+  tapCount.value = 0
   result.value = null
   levelUp.value = false
   stage.value = 'countin'
@@ -175,6 +205,7 @@ async function finish() {
     taps.map((t) => t - latency),
   )
   result.value = r
+  resultBeatMs.value = beat.value
   const applied = applyRhythmResult(progress.value, r.score)
   levelUp.value = applied.levelUp
   const level = progress.value.level
@@ -187,7 +218,18 @@ async function finish() {
 function tap(timeStamp: number) {
   if (stage.value === 'calibrating' || stage.value === 'tapping' || stage.value === 'countin') {
     taps.push(timeStamp)
+    tapCount.value++
   }
+}
+
+/** Pad press: records the tap (using the event timestamp) and spawns a ripple. */
+function padDown(e: PointerEvent) {
+  tap(e.timeStamp)
+  haptic('tap')
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const id = ++rippleId
+  ripples.value.push({ id, x: e.clientX - r.left, y: e.clientY - r.top })
+  setTimeout(() => (ripples.value = ripples.value.filter((x) => x.id !== id)), 650)
 }
 
 function nextPattern() {
@@ -212,9 +254,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 if (E2E) {
   const w = window as unknown as Record<string, unknown>
   w.__rhythm = {
-    tapAtBar: (offsetMs: number) =>
-      taps.push(barStartPerf + offsetMs + (progress.value.latencyMs ?? 0)),
-    tapAtClick: (i: number, offsetMs: number) => taps.push(clickPerf[i]! + offsetMs),
+    tapAtBar: (offsetMs: number) => {
+      taps.push(barStartPerf + offsetMs + (progress.value.latencyMs ?? 0))
+      tapCount.value++
+    },
+    tapAtClick: (i: number, offsetMs: number) => {
+      taps.push(clickPerf[i]! + offsetMs)
+      tapCount.value++
+    },
     expectedOffsets: () => expectedPerf.map((t) => t - barStartPerf),
   }
 }
@@ -225,31 +272,47 @@ const tendency = computed(() => {
   if (Math.abs(m) < 15) return 'Your timing was centred on the beat.'
   return `On average you were ${Math.round(Math.abs(m))} ms ${m < 0 ? 'early' : 'late'}.`
 })
+const resultBeatMs = ref(0)
+const onsetBeats = computed(() => noteOnsets(pattern.value))
+const canAct = computed(() => stage.value === 'ready' || stage.value === 'result')
 const beatLabel = computed(() => (beatIndex.value < 0 ? '' : String((beatIndex.value % 4) + 1)))
 const pct = (x: number) => `${Math.round(x * 100)}%`
 </script>
 
 <template>
-  <p class="muted crumbs"><RouterLink to="/learn">Learn</RouterLink> / Rhythm reading</p>
-  <h1>Rhythm reading</h1>
+  <p class="muted crumbs">
+    <RouterLink to="/learn">Learn</RouterLink> <span aria-hidden="true">/</span> Rhythm reading
+  </p>
+  <div class="titlebar">
+    <h1>Rhythm reading</h1>
+    <HelpButton v-if="loaded && calibrated && canAct" @click="tour?.start()" />
+  </div>
 
   <p v-if="!loaded" class="muted">Loading…</p>
 
   <template v-else>
     <section class="card controls">
       <div>
-        <strong>Level {{ progress.level }}</strong>
+        <strong class="level">Level {{ progress.level }}</strong>
         <span class="muted"> · {{ LEVEL_TEXT[progress.level] }}</span>
-        <div class="muted small">
-          {{ progress.passes }}/{{ PASSES_TO_ADVANCE }} patterns at ≥ {{ pct(PASS_SCORE) }}
-          {{ progress.level < RHYTHM_LEVELS.at(-1)! ? 'to unlock the next level' : '' }}
+        <div class="passes muted">
+          <span class="pips" aria-hidden="true">
+            <i
+              v-for="n in PASSES_TO_ADVANCE"
+              :key="`pip-${n}`"
+              :class="{ on: n <= progress.passes }"
+            />
+          </span>
+          <span
+            >{{ progress.passes }}/{{ PASSES_TO_ADVANCE }} patterns at ≥ {{ pct(PASS_SCORE) }}</span
+          >
         </div>
       </div>
-      <label>
+      <label class="tempo">
         Tempo
         <select
           :value="progress.bpm"
-          :disabled="stage !== 'ready' && stage !== 'result'"
+          :disabled="!canAct"
           @change="setTempo(Number(($event.target as HTMLSelectElement).value))"
         >
           <option v-for="t in TEMPOS" :key="t" :value="t">{{ t }} bpm</option>
@@ -262,11 +325,19 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
       class="card calibrate"
       :data-stage="stage"
     >
-      <h2>Calibrate once</h2>
-      <p>
-        Every device has a small delay between sound, screen and touch. Tap along with the clicks —
-        after a 4-click count-in, tap the next 8 clicks exactly on the beat.
+      <p class="kicker">Calibrate once</p>
+      <h2>Tap with the clicks</h2>
+      <p class="muted">
+        Every device has a small delay. After a 4-click count-in, tap the next 8 clicks on the beat.
       </p>
+      <BeatDots :beat="stage === 'calibrating' ? beatIndex : -1" />
+      <div class="cal-progress" aria-label="Calibration taps">
+        <i
+          v-for="n in 8"
+          :key="`cal-${n}`"
+          :class="{ on: stage === 'calibrating' && n <= tapCount }"
+        />
+      </div>
       <p v-if="calMessage" role="status">{{ calMessage }}</p>
       <button v-if="stage !== 'calibrating'" class="btn btn-primary" @click="calibrate">
         Start calibration
@@ -274,33 +345,29 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
     </section>
 
     <section v-else class="card exercise" :data-stage="stage">
-      <RhythmNotation :bars="pattern" time-signature="4/4" />
+      <div data-tour="notation" class="notation">
+        <RhythmNotation :bars="pattern" time-signature="4/4" />
+      </div>
+      <BeatDots :beat="beatIndex" />
       <div class="row">
-        <button class="btn" :disabled="stage !== 'ready' && stage !== 'result'" @click="listen">
-          ▶ Listen
+        <button class="btn" data-tour="listen" :disabled="!canAct" @click="listen">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+            <path d="M5 3l8 5-8 5z" fill="none" stroke="currentColor" stroke-width="1.2" />
+          </svg>
+          Listen
         </button>
-        <button
-          class="btn btn-primary"
-          :disabled="stage !== 'ready' && stage !== 'result'"
-          @click="startTapping"
-        >
+        <button class="btn btn-primary" data-tour="tap" :disabled="!canAct" @click="startTapping">
           Tap it
         </button>
-        <button
-          class="btn"
-          :disabled="stage !== 'ready' && stage !== 'result'"
-          @click="nextPattern"
-        >
-          New pattern
-        </button>
+        <button class="btn btn-ghost" :disabled="!canAct" @click="nextPattern">New pattern</button>
       </div>
       <p v-if="calMessage" class="muted small">{{ calMessage }}</p>
-      <button class="link" :disabled="stage !== 'ready' && stage !== 'result'" @click="calibrate">
-        Recalibrate
-      </button>
+      <button class="link" :disabled="!canAct" @click="calibrate">Recalibrate</button>
 
       <div v-if="stage === 'result' && result" class="result" role="status">
-        <h2 :class="result.score >= PASS_SCORE ? 'ok' : ''">{{ pct(result.score) }}</h2>
+        <h2 :class="result.score >= PASS_SCORE ? 'ok' : ''">
+          <CountUp :value="Math.round(result.score * 100)" suffix="%" />
+        </h2>
         <p>
           {{ result.hits }} of {{ result.hits + result.misses }} notes hit
           <template v-if="result.misses"> · {{ result.misses }} missed</template>
@@ -310,23 +377,16 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
           </template>
         </p>
         <p v-if="tendency" class="muted">{{ tendency }}</p>
-        <ol class="marks" aria-label="Per-note timing">
-          <li
-            v-for="(e, i) in result.perNote"
-            :key="i"
-            :class="
-              e === null
-                ? 'miss'
-                : Math.abs(e) <= 40
-                  ? 'good'
-                  : Math.abs(e) <= 90
-                    ? 'ok-ish'
-                    : 'off'
-            "
-            :title="e === null ? 'missed' : `${e > 0 ? '+' : ''}${Math.round(e)} ms`"
-          />
-        </ol>
-        <p v-if="levelUp" class="ok"><strong>Level up!</strong> New rhythms unlocked.</p>
+        <TimingLane
+          :onsets="onsetBeats"
+          :errors="result.perNote"
+          :beat-ms="resultBeatMs"
+          :beats="8"
+        />
+        <div v-if="levelUp" class="levelup">
+          <ResultStamp text="Level up!" tone="ok" />
+          <p class="muted">New rhythms unlocked.</p>
+        </div>
       </div>
     </section>
 
@@ -334,11 +394,24 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
       v-if="stage === 'calibrating' || stage === 'countin' || stage === 'tapping'"
       class="pad"
       :class="{ live: stage !== 'countin' }"
-      @pointerdown.prevent="tap($event.timeStamp)"
+      @pointerdown.prevent="padDown"
     >
-      <span class="beat">{{ beatLabel }}</span>
-      <span>{{ stage === 'countin' ? 'Get ready…' : 'Tap here or press Space' }}</span>
+      <span class="ripples" aria-hidden="true">
+        <i v-for="r in ripples" :key="`r-${r.id}`" :style="{ left: r.x + 'px', top: r.y + 'px' }" />
+      </span>
+      <span :key="`b-${beatIndex}`" class="beat">{{ beatLabel }}</span>
+      <span class="padhint">{{
+        stage === 'countin' ? 'Get ready…' : 'Tap here or press Space'
+      }}</span>
     </button>
+
+    <CoachTour
+      v-if="calibrated && canAct"
+      ref="tour"
+      id="rhythm"
+      :steps="TOUR"
+      :auto-start="stage === 'ready'"
+    />
   </template>
 </template>
 
@@ -346,6 +419,15 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
 .crumbs {
   margin: 0;
   font-size: 0.9rem;
+}
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.titlebar h1 {
+  font-size: clamp(2.2rem, 7vw, 3rem);
 }
 .controls {
   display: flex;
@@ -355,6 +437,45 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+.level {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.6rem;
+}
+.passes {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+.pips {
+  display: inline-flex;
+  gap: 4px;
+}
+.pips i,
+.cal-progress i {
+  display: block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  transition:
+    background-color 0.2s,
+    transform 0.2s var(--ease-spring, ease-out);
+}
+.pips i.on,
+.cal-progress i.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.15);
+}
+.tempo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
 .small {
   font-size: 0.85rem;
 }
@@ -362,10 +483,30 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
 .calibrate {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  padding-block: 1.75rem;
+}
+.calibrate {
+  align-items: center;
+  text-align: center;
+}
+.calibrate h2,
+.calibrate p {
+  margin: 0;
 }
 .calibrate h2 {
-  margin: 0;
+  font-size: 2.4rem;
+}
+.cal-progress {
+  display: flex;
+  gap: 0.6rem;
+}
+.cal-progress i {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+.notation {
+  width: 100%;
 }
 .row {
   display: flex;
@@ -373,59 +514,68 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   gap: 0.5rem;
   justify-content: center;
 }
+.row .btn svg {
+  margin-right: 0.4rem;
+}
 .link {
   align-self: center;
   background: none;
   border: none;
-  color: var(--accent-ink);
+  color: var(--muted);
   font: inherit;
+  font-size: 0.85rem;
   cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.link:hover:not(:disabled) {
+  color: var(--accent-ink);
 }
 .result {
   text-align: center;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: rise 0.4s var(--ease-out);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.result p {
+  margin: 0;
 }
 .result h2 {
   margin: 0;
-  font-size: 2.2rem;
+  font-size: clamp(3.6rem, 14vw, 5rem);
+  line-height: 1;
+}
+.levelup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 .ok {
   color: var(--ok);
 }
-.marks {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  list-style: none;
-  padding: 0;
-}
-.marks li {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-.marks .good {
-  background: var(--ok);
-}
-.marks .ok-ish {
-  background: var(--warn);
-}
-.marks .off,
-.marks .miss {
-  background: var(--bad);
-}
-.marks .miss {
-  opacity: 0.4;
-}
 .pad {
+  position: relative;
+  overflow: hidden;
   margin-top: 1rem;
   width: 100%;
-  min-height: 160px;
+  min-height: 220px;
   border-radius: var(--radius);
-  border: 2px dashed var(--border);
+  border: 1px dashed var(--muted);
   background: var(--surface);
   color: var(--muted);
   font: inherit;
-  font-weight: 700;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -433,16 +583,48 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
   gap: 0.25rem;
   touch-action: manipulation;
   user-select: none;
+  transition:
+    border-color 0.2s,
+    background-color 0.1s;
 }
 .pad.live {
-  border-color: var(--series);
+  border: 1px solid var(--accent);
   color: var(--text);
 }
 .pad:active {
-  background: var(--bg);
+  background: var(--accent-soft);
+}
+.ripples i {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+  animation: ripple 0.6s var(--ease-out) forwards;
+}
+@keyframes ripple {
+  to {
+    transform: scale(14);
+    opacity: 0;
+  }
 }
 .beat {
-  font-size: 2.5rem;
-  min-height: 3rem;
+  font-family: var(--serif);
+  font-size: 5.5rem;
+  line-height: 1;
+  min-height: 5.5rem;
+  animation: pop 0.25s var(--ease-out);
+}
+@keyframes pop {
+  from {
+    transform: scale(0.8);
+    opacity: 0.2;
+  }
+}
+.padhint {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 </style>

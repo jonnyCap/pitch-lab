@@ -92,16 +92,15 @@ function press(midi: number, e: PointerEvent) {
   height: 160px;
   max-width: 640px;
   margin: 0 auto;
-  padding: 0 3px 3px;
+  padding: 0;
   user-select: none;
   touch-action: manipulation;
   perspective: 600px;
   perspective-origin: 50% -40%;
-  background: var(--key-black);
-  border-radius: 4px 4px 8px 8px;
-  /* Key-slip felt. */
-  border-top: 4px solid color-mix(in srgb, var(--accent) 75%, #000);
-  box-shadow: var(--shadow);
+  background: var(--key-shadow);
+  border: 1px solid var(--text);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 button {
   font: inherit;
@@ -119,49 +118,48 @@ button:disabled {
 .white {
   flex: 1 1 0;
   min-width: 0;
-  margin: 0 1px;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--key-white) 88%, #000) 0,
-    var(--key-white) 12%
-  );
+  margin: 0 0.5px;
+  background: var(--key-white);
   border: 0;
-  border-radius: 0 0 5px 5px;
+  border-radius: 0 0 2px 2px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 10px;
-  color: #6b6a63;
-  box-shadow:
-    inset 0 -6px 0 color-mix(in srgb, var(--key-white) 82%, #000),
-    inset 0 0 0 1px rgb(0 0 0 / 0.08);
+  color: var(--muted);
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--key-white) 92%, #000);
 }
 .black {
   position: absolute;
   top: 0;
   height: 60%;
-  background: linear-gradient(to bottom, #2a2a2c, var(--key-black) 70%, #3a3a3d 92%, #222 100%);
+  background: var(--key-black);
   border: 0;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 2px 2px;
   z-index: 1;
   box-shadow:
-    inset 0 -5px 0 #454548,
-    inset 1px 0 0 rgb(255 255 255 / 0.06),
-    0 4px 6px rgb(0 0 0 / 0.35);
+    inset 0 -3px 0 rgb(255 255 255 / 0.12),
+    0 1px 2px rgb(0 0 0 / 0.3);
 }
-/* Pressed: the key pivots at the back and the front lip shrinks. */
+/* Pressed: the key pivots at the back, a subtle dip. */
 .white:not(:disabled):active {
-  transform: rotateX(-5deg);
+  transform: rotateX(-2deg);
   box-shadow:
-    inset 0 -2px 0 color-mix(in srgb, var(--key-white) 82%, #000),
-    inset 0 0 0 1px rgb(0 0 0 / 0.08),
-    inset 0 18px 18px -14px rgb(0 0 0 / 0.25);
+    inset 0 -1px 0 color-mix(in srgb, var(--key-white) 90%, #000),
+    inset 0 14px 14px -12px rgb(0 0 0 / 0.18);
 }
 .black:not(:disabled):active {
-  transform: rotateX(-7deg);
-  box-shadow:
-    inset 0 -2px 0 #454548,
-    0 1px 2px rgb(0 0 0 / 0.35);
+  transform: rotateX(-3deg);
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.12);
+}
+@keyframes flash {
+  from {
+    filter: brightness(1.5);
+  }
+}
+.correct,
+.wrong {
+  animation: flash 0.35s var(--ease-out);
 }
 .correct {
   background: var(--ok) !important;
@@ -175,7 +173,7 @@ button:disabled {
   background: var(--series) !important;
 }
 .c {
-  font-family: var(--mono);
-  font-size: 0.62rem;
+  font-family: var(--serif);
+  font-size: 0.9rem;
 }
 </style>

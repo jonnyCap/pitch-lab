@@ -5,7 +5,7 @@
  * C … B (Wong et al. 2020); N answers "not in my set". Uses pointerdown +
  * Event.timeStamp for accurate response times.
  */
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   ALL_PITCH_CLASSES,
   PITCH_CLASS_NAMES_FLAT,
@@ -59,10 +59,23 @@ watch(
   },
 )
 
+// Neutral acknowledgement: a brief ink ring on the pressed key (never a correctness cue).
+const acked = ref<WheelAnswer | null>(null)
+let ackTimer: ReturnType<typeof setTimeout> | undefined
+function ack(a: WheelAnswer) {
+  acked.value = null
+  void nextTick(() => {
+    acked.value = a
+    clearTimeout(ackTimer)
+    ackTimer = setTimeout(() => (acked.value = null), 450)
+  })
+}
+
 function choose(a: WheelAnswer, timeStamp: number) {
   if (props.disabled) return
   if (a === 'none' ? !props.allowNone : !props.options.includes(a)) return
   if (a !== 'none') aim(a)
+  ack(a)
   emit('answer', a, timeStamp)
 }
 
@@ -81,18 +94,50 @@ function onKey(e: KeyboardEvent) {
 }
 
 onMounted(() => window.addEventListener('keydown', onKey))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey)
+  clearTimeout(ackTimer)
+})
 
 function position(pc: number) {
   const angle = (pc / 12) * 2 * Math.PI - Math.PI / 2
   return { left: `${50 + 40 * Math.cos(angle)}%`, top: `${50 + 40 * Math.sin(angle)}%` }
 }
+
+// Engraved blueprint ticks on the dial: 60 minor + 12 major, just inside the keys.
+const ticks = Array.from({ length: 60 }, (_, i) => {
+  const major = i % 5 === 0
+  const a = (i / 60) * 2 * Math.PI - Math.PI / 2
+  const r1 = 26.5
+  const r0 = major ? 23.2 : 24.8
+  return {
+    i,
+    major,
+    x1: 50 + r0 * Math.cos(a),
+    y1: 50 + r0 * Math.sin(a),
+    x2: 50 + r1 * Math.cos(a),
+    y2: 50 + r1 * Math.sin(a),
+  }
+})
 </script>
 
 <template>
   <div class="wrap">
     <div class="wheel" role="group" aria-label="Pitch names">
-      <div class="plate" aria-hidden="true" />
+      <svg class="plate" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="rim" cx="50" cy="50" r="49.4" />
+        <circle class="guide" cx="50" cy="50" r="40" />
+        <circle class="guide inner" cx="50" cy="50" r="22.4" />
+        <line
+          v-for="t in ticks"
+          :key="t.i"
+          :class="t.major ? 'tick major' : 'tick'"
+          :x1="t.x1"
+          :y1="t.y1"
+          :x2="t.x2"
+          :y2="t.y2"
+        />
+      </svg>
       <div
         class="needle"
         :class="{
@@ -112,6 +157,7 @@ function position(pc: number) {
           active: options.includes(pc),
           correct: correct === pc,
           wrong: wrong === pc,
+          ack: acked === pc,
         }"
         :style="position(pc)"
         :disabled="disabled || !options.includes(pc)"
@@ -130,7 +176,7 @@ function position(pc: number) {
       v-if="allowNone"
       type="button"
       class="btn none"
-      :class="{ correct: correct === 'none', wrong: wrong === 'none' }"
+      :class="{ correct: correct === 'none', wrong: wrong === 'none', ack: acked === 'none' }"
       :disabled="disabled"
       aria-label="Not in my set (key N)"
       @pointerdown.prevent="choose('none', $event.timeStamp)"
@@ -155,20 +201,37 @@ function position(pc: number) {
   user-select: none;
   touch-action: manipulation;
 }
-/* Dial plate: 1px rim + 60 minor / 12 major engraved ticks. */
+/* Dial plate: hairline rim, construction circles, engraved ticks. */
 .plate {
   position: absolute;
-  inset: 1%;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background:
-    radial-gradient(circle, var(--surface) 0 57%, transparent 57.3%),
-    repeating-conic-gradient(from -0.75deg, var(--muted) 0 1.5deg, transparent 1.5deg 30deg),
-    repeating-conic-gradient(from -0.3deg, var(--border) 0 0.6deg, transparent 0.6deg 6deg),
-    var(--surface);
-  -webkit-mask: radial-gradient(circle, #000 0 61.5%, transparent 61.8% 64%, #000 64.3%);
-  mask: radial-gradient(circle, #000 0 61.5%, transparent 61.8% 64%, #000 64.3%);
-  box-shadow: var(--shadow);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.rim {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 0.35;
+}
+.guide {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 0.3;
+  stroke-dasharray: 0.8 1.6;
+}
+.guide.inner {
+  stroke-dasharray: none;
+}
+.tick {
+  stroke: var(--muted);
+  stroke-width: 0.25;
+  opacity: 0.55;
+}
+.tick.major {
+  stroke: var(--text);
+  stroke-width: 0.4;
+  opacity: 0.8;
 }
 /* Indicator: a ring + pointer that springs to the answer. */
 .needle {
@@ -179,20 +242,20 @@ function position(pc: number) {
   transition:
     transform 0.6s var(--ease-spring),
     opacity 0.25s;
-  opacity: 0.5;
+  opacity: 0.6;
   pointer-events: none;
 }
 .needle::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -7px;
+  top: -6px;
   width: 0;
   height: 0;
   transform: translateX(-50%);
-  border: 7px solid transparent;
+  border: 5px solid transparent;
   border-top: 0;
-  border-bottom: 10px solid var(--muted);
+  border-bottom: 8px solid var(--muted);
   opacity: 0;
   transition:
     border-color 0.2s,
@@ -212,13 +275,12 @@ function position(pc: number) {
   border-color: color-mix(in srgb, var(--bad) 60%, transparent);
 }
 
-/* Keycaps. */
+/* Keys: raised discs with ink hairline; dark mode uses the dark raised surface. */
 .pc {
-  --lip: 3px;
   position: absolute;
-  transform: translate(-50%, -50%);
   width: 18.5%;
   aspect-ratio: 1;
+  margin: -9.25% 0 0 -9.25%;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--raised);
@@ -230,25 +292,23 @@ function position(pc: number) {
   justify-content: center;
   line-height: 1.05;
   cursor: pointer;
-  box-shadow: 0 var(--lip) 0 var(--key-shadow);
   transition:
     background-color 0.12s,
     border-color 0.12s,
     color 0.12s,
-    box-shadow 0.08s var(--ease-out),
-    transform 0.08s var(--ease-out),
+    transform 0.1s var(--ease-out),
     opacity 0.2s;
 }
 .pc.active {
   color: var(--text);
-  border-color: var(--muted);
+  border-color: var(--text);
 }
 .pc.active:not(:disabled):hover {
   border-color: var(--accent);
+  color: var(--accent-ink);
 }
 .pc.active:not(:disabled):active {
-  transform: translate(-50%, calc(-50% + var(--lip)));
-  box-shadow: 0 0 0 var(--key-shadow);
+  transform: scale(0.94);
   background: var(--accent-soft);
 }
 .pc:disabled {
@@ -256,7 +316,19 @@ function position(pc: number) {
 }
 .pc:not(.active) {
   opacity: 0.3;
-  box-shadow: none;
+}
+.ack {
+  animation: ack 0.42s var(--ease-out);
+}
+@keyframes ack {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--text) 35%, transparent);
+    transform: scale(0.94);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+    transform: scale(1);
+  }
 }
 .correct,
 .wrong {
@@ -266,34 +338,16 @@ function position(pc: number) {
 .correct {
   background: var(--ok) !important;
   border-color: var(--ok) !important;
-  box-shadow: 0 0 0 0 var(--ok);
-  animation: ring 0.7s var(--ease-out);
 }
 .wrong {
   background: var(--bad) !important;
   border-color: var(--bad) !important;
-  animation: shake 0.32s var(--ease-out);
-}
-@keyframes ring {
-  from {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent);
-  }
-  to {
-    box-shadow: 0 0 0 14px transparent;
-  }
-}
-@keyframes shake {
-  25% {
-    margin-left: -3px;
-  }
-  60% {
-    margin-left: 3px;
-  }
 }
 .name {
-  font-weight: 650;
-  font-size: clamp(0.95rem, 3.8vw, 1.2rem);
-  letter-spacing: -0.02em;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(1.15rem, 4.6vw, 1.5rem);
+  letter-spacing: -0.01em;
 }
 .alt {
   font-size: 0.68rem;
@@ -309,7 +363,8 @@ function position(pc: number) {
   min-width: 12rem;
   touch-action: manipulation;
 }
-.none.correct {
+.none.correct,
+.none.wrong {
   animation: none;
 }
 .center {

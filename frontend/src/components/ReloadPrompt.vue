@@ -30,5 +30,6 @@ function close() {
   gap: 0.75rem;
   z-index: 20;
   box-shadow: var(--shadow);
+  padding: 1rem 1.25rem;
 }
 </style>

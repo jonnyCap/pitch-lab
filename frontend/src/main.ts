@@ -4,6 +4,8 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import 'vue-sonner/style.css'
+import '@fontsource/instrument-serif/latin-400.css'
+import '@fontsource/instrument-serif/latin-400-italic.css'
 import './styles/base.css'
 import { initTheme } from './lib/theme'
 

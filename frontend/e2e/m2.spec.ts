@@ -12,7 +12,7 @@ test('distractors: "not in my set" answers pass a 4-pitch step', async ({ page }
   await expect(page.getByRole('button', { name: /Not in my set/ })).toBeVisible()
   await playLevel(page, correct)
   await expect(page.locator('.summary h2')).toContainText('100%')
-  await expect(page.getByRole('cell', { name: 'Not in set' })).toBeVisible()
+  await expect(page.locator('.summary .distractors')).toContainText('Not in set')
   await expect(page.getByText(/\+\d+ points/)).toBeVisible()
 })
 
@@ -67,7 +67,7 @@ test('mastery: passing the 4th time completes the ladder and asks for the final 
   await playLevel(page, correct)
   await expect(page.getByText(/You mastered the whole ladder/)).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByRole('heading', { name: 'Mastered 🎉' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mastered' })).toBeVisible()
   await expect(page.getByText('Final test due.')).toBeVisible()
 })
 

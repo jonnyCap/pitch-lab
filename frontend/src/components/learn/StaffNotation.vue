@@ -105,5 +105,11 @@ onBeforeUnmount(() => {
 .svg :deep(svg) {
   display: block;
   overflow: visible;
+  animation: fade-in 0.3s var(--ease-out);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
 </style>

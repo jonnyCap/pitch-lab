@@ -14,12 +14,7 @@ const themeLabel = computed(
   <header class="topbar">
     <div class="bar">
       <RouterLink to="/" class="brand" aria-label="Pitch Lab home">
-        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-          <circle cx="16" cy="16" r="15" />
-          <path d="M16 4v12l7.5 5" />
-          <circle class="dot" cx="16" cy="16" r="2.4" />
-        </svg>
-        <span>Pitch<span class="lab">Lab</span></span>
+        <span class="word">Pitch <em>Lab</em><i class="dot" /></span>
       </RouterLink>
       <nav>
         <RouterLink to="/trainer">Trainer</RouterLink>
@@ -70,95 +65,78 @@ const themeLabel = computed(
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(10px) saturate(1.2);
-  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .bar {
-  max-width: 960px;
+  max-width: 920px;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.6rem 1rem;
+  gap: 1.5rem;
+  padding: 0.7rem 1.25rem;
 }
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 700;
+  font-family: var(--serif);
+  font-size: 1.65rem;
+  line-height: 1;
   letter-spacing: -0.02em;
   color: var(--text);
   text-decoration: none;
   margin-right: auto;
 }
-.lab {
-  color: var(--accent-ink);
-  margin-left: 1px;
+.brand em {
+  font-style: italic;
 }
-.mark {
-  width: 26px;
-  height: 26px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.05em;
+  transition: transform 0.4s var(--ease-spring);
 }
-.mark path {
-  stroke: var(--accent);
-  stroke-width: 2.2;
-  transform-origin: 16px 16px;
-  transition: transform 0.6s var(--ease-spring);
-}
-.brand:hover .mark path {
-  transform: rotate(60deg);
-}
-.mark .dot {
-  fill: currentColor;
-  stroke: none;
+.brand:hover .dot {
+  transform: scale(1.6);
 }
 nav {
   display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 2px);
-  background: var(--surface);
+  gap: 1.4rem;
 }
 nav a {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  position: relative;
+  font-size: 0.92rem;
   color: var(--muted);
   text-decoration: none;
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius);
-  transition:
-    color 0.15s,
-    background-color 0.15s;
+  padding: 0.3rem 0;
+  transition: color 0.15s;
+}
+nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--text);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-out);
 }
 nav a:hover {
   color: var(--text);
 }
 nav a.router-link-active {
   color: var(--text);
-  background: var(--raised);
-  box-shadow:
-    inset 0 0 0 1px var(--border),
-    0 1px 0 var(--key-shadow);
 }
-nav a.router-link-active::before {
-  content: '';
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+nav a.router-link-active::after {
+  transform: scaleX(1);
+  height: 2px;
   background: var(--accent);
-  margin-right: 0.4rem;
-  vertical-align: 0.12em;
-  box-shadow: 0 0 6px var(--accent);
 }
 .theme {
   display: grid;
@@ -166,21 +144,22 @@ nav a.router-link-active::before {
   width: 32px;
   height: 32px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  border-radius: 50%;
+  background: transparent;
   color: var(--text);
   cursor: pointer;
   padding: 0;
+  transition: border-color 0.15s;
 }
 .theme:hover {
-  border-color: var(--muted);
+  border-color: var(--text);
 }
 .theme svg {
   width: 16px;
   height: 16px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.5;
   stroke-linecap: round;
 }
 .theme .fill {
@@ -188,11 +167,18 @@ nav a.router-link-active::before {
   stroke: none;
 }
 @media (max-width: 480px) {
-  .brand > span {
-    display: none;
+  .bar {
+    gap: 0.9rem;
+    padding-inline: 1rem;
+  }
+  .brand {
+    font-size: 1.4rem;
+  }
+  nav {
+    gap: 0.9rem;
   }
   nav a {
-    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
   }
 }
 </style>

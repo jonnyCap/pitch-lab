@@ -161,7 +161,10 @@ const fmt = (v: number) => `${Math.round(v)} ${props.unit}`
   margin: 0;
 }
 figcaption {
-  font-weight: 700;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--muted);
   margin-bottom: 0.4rem;
 }
 .plot {
@@ -190,6 +193,14 @@ svg {
 .bar {
   fill: var(--series);
   transition: opacity 0.1s;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: grow 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+@keyframes grow {
+  from {
+    transform: scaleY(0);
+  }
 }
 .bar.dim {
   opacity: 0.45;
@@ -208,7 +219,7 @@ svg {
   transform: translate(-50%, -100%);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 0.3rem 0.55rem;
   display: flex;
   flex-direction: column;
@@ -226,7 +237,6 @@ details {
   font-size: 0.85rem;
 }
 summary {
-  cursor: pointer;
   color: var(--muted);
 }
 table {
